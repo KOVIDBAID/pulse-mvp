@@ -58,12 +58,7 @@ export const ROUTES: Record<
     },
   },
   caregiver: {
-    nav: [
-      d("home", "Home"),
-      d("alerts", "Alerts"),
-      d("notes", "Notes"),
-      d("billing", "Payments"),
-    ],
+    nav: [d("home", "Home"), d("updates", "Updates"), d("billing", "Payments")],
     drawer: [
       {
         title: "Family",
@@ -81,12 +76,12 @@ export const ROUTES: Record<
         ],
       },
     ],
-    hidden: [],
+    hidden: ["alerts", "notes"],
     redirects: {
       care: "home",
       choose: "home?switch=1",
       permissions: "family",
-      notifications: "alerts",
+      notifications: "updates",
       profile: "settings",
       records: "notes",
     },

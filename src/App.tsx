@@ -241,26 +241,38 @@ function Shell({ children, title }: { children: ReactNode; title: string }) {
     );
   const nav = (
     <>
-      {config.nav.map((item, i) => (
-        <button
-          key={item.path}
-          onClick={() => select(item)}
-          className={
-            route.split("?")[0] === `/${role}/${item.path}` ? "active" : ""
-          }
-        >
-          {i === 0 ? (
-            <Home size={20} />
-          ) : i === 1 ? (
-            <Activity size={20} />
-          ) : i === 2 ? (
-            <FileText size={20} />
-          ) : (
-            <MessageCircle size={20} />
-          )}
-          <span>{item.label}</span>
-        </button>
-      ))}
+      {config.nav
+        .filter(
+          (item) =>
+            role !== "caregiver" ||
+            item.path !== "billing" ||
+            p?.payerId === s.session.userId,
+        )
+        .map((item, i) => (
+          <button
+            key={item.path}
+            aria-current={
+              route.split("?")[0] === `/${role}/${item.path}`
+                ? "page"
+                : undefined
+            }
+            onClick={() => select(item)}
+            className={
+              route.split("?")[0] === `/${role}/${item.path}` ? "active" : ""
+            }
+          >
+            {i === 0 ? (
+              <Home size={20} />
+            ) : i === 1 ? (
+              <Activity size={20} />
+            ) : i === 2 ? (
+              <FileText size={20} />
+            ) : (
+              <MessageCircle size={20} />
+            )}
+            <span>{item.label}</span>
+          </button>
+        ))}
     </>
   );
   const groups = (
@@ -3185,7 +3197,8 @@ function Notifications() {
         E.minutes(b.day, b.time) - E.minutes(a.day, a.time),
     );
   return (
-    <Shell title="Notifications">
+    <Shell title={s.session.role === "caregiver" ? "Updates" : "Notifications"}>
+      {s.session.role === "caregiver" && <h2>This week</h2>}
       <div className="m-tabs">
         {["all", "alerts", "medicines", "tests", "message", "summary"].map(
           (t) => (
@@ -3280,19 +3293,26 @@ function Caregiver({ alertsOnly = false }: { alertsOnly?: boolean } = {}) {
   const alerts = E.view(s, user, pid, "alerts", s.alerts).filter(
     (a) => !a.private && a.status !== "resolved",
   );
-  const checks = E.view(s, user, pid, "summary", s.weeklyChecks);
-  const sprints = E.view(s, user, pid, "sprint", s.sprints);
-  const appointments = E.view(s, user, pid, "tests", s.appointments);
-  const pr = E.allow(s, user, pid, "proof") ? E.proof(s, pid) : null;
-  const encourage = checks.some(
-    (w) =>
-      w.day >= 22 && w.day < 29 && s.sim.day - w.day < 7 && w.habitDays < 4,
+  const urgentMember = members.find((l) =>
+    E.view(s, user, l.patientId, "alerts", s.alerts).some(
+      (a) => a.priority === "P0" && a.status !== "resolved",
+    ),
   );
+  useEffect(() => {
+    if (!alertsOnly && urgentMember && urgentMember.patientId !== pid)
+      mutate((s) => {
+        s.session.patientId = urgentMember.patientId;
+      });
+  }, [urgentMember?.patientId, pid, alertsOnly]);
+  if (!alertsOnly && urgentMember) return <Caregiver alertsOnly />;
   if (alertsOnly)
     return (
       <Shell title="Shared safety alerts">
         {alerts.map((a) => (
-          <Card key={a.id} title={`Safety ${a.rule}`}>
+          <Card
+            key={a.id}
+            title={`${E.ruleLabel(a.rule)}${a.value ? ` · ${a.value} mg/dL` : ""}`}
+          >
             <SourceBadge row={s.readings.find((r) => r.id === a.source)} />
             <p>
               {a.value ?? ""} {a.value ? "mg/dL" : ""} · {a.status} · {a.owner}
@@ -3336,7 +3356,7 @@ function Caregiver({ alertsOnly = false }: { alertsOnly?: boolean } = {}) {
                   })
                 }
               >
-                I’ve spoken to them
+                I've spoken to him
               </Btn>
             </div>
             {s.users?.[user]?.city === "Kanpur" ? (
@@ -3353,194 +3373,85 @@ function Caregiver({ alertsOnly = false }: { alertsOnly?: boolean } = {}) {
         {!alerts.length && <Empty>No active shared alerts.</Empty>}
       </Shell>
     );
+  const cards = members
+    .map((l) => {
+      const member = E.patient(s, l.patientId),
+        id = member.id;
+      const sharedAlerts = E.view(s, user, id, "alerts", s.alerts).filter(
+        (a) => a.status !== "resolved",
+      );
+      const readings = E.view(s, user, id, "readings", s.readings).filter(
+        (r) => r.context === "fasting" && r.day >= s.sim.day - 6,
+      );
+      const tests = E.allow(s, user, id, "tests")
+        ? E.testingAdherence(s, id)
+        : null;
+      const wellness = E.allow(s, user, id, "wellness") ? DS.week(s, id) : null;
+      const medicines = E.allow(s, user, id, "medicines");
+      const missed = medicines
+        ? Array.from({ length: 7 }, (_, i) => s.sim.day - i - 1)
+            .filter((d) => d >= 0)
+            .flatMap((d) => E.medicineSlots(s, id, d))
+            .filter((slot) => slot.time >= "19:00" && !slot.taken).length
+        : 0;
+      const stock = medicines ? E.stockDays(s, id) : Infinity;
+      const rank = sharedAlerts.some((a) => a.priority === "P0")
+        ? 2
+        : sharedAlerts.length || missed >= 2 || stock <= 7
+          ? 1
+          : 0;
+      const why = [
+        readings.length
+          ? `Fasting avg ${Math.round(readings.reduce((n, r) => n + r.value, 0) / readings.length)} this week`
+          : "",
+        tests ? `tests ${tests.done} of ${tests.due}` : "",
+        wellness
+          ? `walks ${wellness.walks} evenings · From band · wellness only`
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      return { member, rank, why, medicines, missed, stock, wellness };
+    })
+    .sort((a, b) => b.rank - a.rank);
   return (
-    <Shell title="Family care">
-      {E.allow(s, user, pid, "tests") && (
-        <Card title="Testing summary">
-          <p>
-            Tests this week: {E.testingAdherence(s, pid).done} of{" "}
-            {E.testingAdherence(s, pid).due} done
-          </p>
-        </Card>
+    <Shell title="Home">
+      {!cards.length && (
+        <Empty>No family member is sharing with you yet.</Empty>
       )}
-      <div className="family-switch">
-        {members.map((l) => (
-          <button
-            key={l.id}
-            className={l.patientId === pid ? "active" : ""}
-            onClick={() =>
-              mutate((s) => {
-                s.session.patientId = l.patientId;
-              })
-            }
+      {cards.map(
+        ({ member, rank, why, medicines, missed, stock, wellness }) => (
+          <Card
+            key={member.id}
+            title={`${member.id === E.P ? "Papa" : member.name.split(" ")[0]} · ${["Steady", "Needs attention", "Urgent"][rank]}`}
           >
-            <Users size={20} />
-            {E.patient(s, l.patientId).name.split(" ")[0]}
-          </button>
-        ))}
-        <button onClick={() => go("/caregiver/connect")}>+ Connect</button>
-      </div>
-      {!permitted ? (
-        <Card title="Sharing paused or access withdrawn">
-          <p>
-            This family member controls access on their phone. No patient data
-            is available.
-          </p>
-          <Btn onClick={() => go("/caregiver/choose")}>Family members</Btn>
-        </Card>
-      ) : (
-        <>
-          <div className="m-hero">
-            <span>YOU’RE PART OF THEIR CIRCLE</span>
-            <h1>{p.name.split(" ")[0]}’s week</h1>
-            <Badge
-              tone={alerts.some((a) => a.priority === "P0") ? "urgent" : ""}
-            >
-              {alerts.some((a) => a.priority === "P0") ? "Urgent" : "Steady"}
+            <Badge tone={rank === 2 ? "urgent" : rank === 1 ? "amber" : ""}>
+              {rank === 2 ? "⚠" : rank === 1 ? "!" : "✓"}{" "}
+              {["Steady", "Needs attention", "Urgent"][rank]}
             </Badge>
-            <p>
-              Day {s.sim.day - p.start} · latest habit update{" "}
-              {checks.at(-1)?.habitDays ?? "—"}/7 days
-            </p>
-          </div>
-          {alerts.map((a) => (
-            <Card key={a.id} title={`Safety ${a.rule}`}>
-              <SourceBadge row={s.readings.find((r) => r.id === a.source)} />
+            <small>{member.name}</small><p>{why || "Only the categories they share are shown."}</p>
+            {medicines && (
               <p>
-                {a.value ?? ""} {a.value ? "mg/dL" : ""} · {a.status} ·{" "}
-                {a.owner}
+                {missed
+                  ? `${missed} evening doses not marked`
+                  : "Medicines: on track"}
               </p>
-              <ul className="timeline">
-                {a.timeline.map((t: any, i: number) => (
-                  <li key={i}>
-                    {t.time} · {t.text}
-                  </li>
-                ))}
-              </ul>
-              <div className="m-actions">
-                <a className="m-btn" href={`tel:${p.mobile}`}>
-                  Call patient
-                </a>
-                <a
-                  className="m-btn secondary"
-                  href={`tel:${E.safetyContact(s, pid).phone}`}
-                >
-                  Call local contact
-                </a>
-                <a className="m-btn secondary" href="tel:9876500002">
-                  Call clinic
-                </a>
-                <Btn
-                  secondary
-                  onClick={() =>
-                    mutate((s) => {
-                      const target = s.alerts.find((r) => r.id === a.id)!;
-                      if (target.status === "open") {
-                        target.status = "acknowledged";
-                        target.owner =
-                          s.users?.[user]?.name ||
-                          roleNames[user]?.split(" · ")[0] ||
-                          "Caregiver";
-                        target.timeline.push({
-                          ...E.stamp(s),
-                          text: `${target.owner} is handling this`,
-                        });
-                      }
-                    })
-                  }
-                >
-                  I’ve spoken to them
-                </Btn>
-              </div>
-              {s.users?.[user]?.city === "Kanpur" ? (
-                <a className="m-btn danger" href="tel:112">
-                  Call 112
-                </a>
-              ) : (
-                <p className="m-hint">
-                  You’re outside Kanpur. The person near them should call 112.
-                </p>
-              )}
-            </Card>
-          ))}
-          {E.allow(s, user, pid, "medicines") ? (
-            <DoseList pid={pid} caregiver />
-          ) : (
-            <Card title="Medicines not shared">
-              <p>Only categories the patient approved are shown.</p>
-            </Card>
-          )}
-          {E.allow(s, user, pid, "wellness") && DS.summary(s, pid) && (
-            <Card title="Weekly wellness">
-              <p>From band · wellness only · Demo</p>
-              <p className="wellness-disclaimer">
-                For wellness trends — not for diagnosis.
-              </p>
-              <p>{DS.summary(s, pid)}</p>
-            </Card>
-          )}
-          {encourage && (
-            <Card title="Encourage">
-              <p>
-                “I noticed your walk evenings helped. A short call and one small
-                step are enough this week.”
-              </p>
-              <a className="m-btn" href={`tel:${p.mobile}`}>
-                Call patient
+            )}
+            {stock <= 7 ? (
+              <p>Tablets run out in {Math.max(0, stock)} days</p>
+            ) : wellness && wellness.walks >= 4 ? (
+              <a className="m-btn secondary" href={`tel:${member.mobile}`}>
+                Call {member.id === E.P ? "Papa" : member.name.split(" ")[0]} —
+                his walks are working
               </a>
-            </Card>
-          )}
-          <Card title="Upcoming">
-            {appointments.map((a) => (
-              <p key={a.id}>
-                {E.date(a.slotDay)} {a.slot} · {a.mode} · {a.status}
-              </p>
-            ))}
-            {!appointments.length && <Empty />}
+            ) : null}
           </Card>
-          {sprints.map((sp) => {
-            const r = E.sprintResult(
-              sp.evenings.filter((e: any) => e.day < s.sim.day),
-            );
-            return r.status === "result" ? (
-              <Card
-                key={sp.id}
-                title={
-                  sp.habitId === "veg_dal_first"
-                    ? "Kitchen card"
-                    : "What worked"
-                }
-              >
-                <p>
-                  {E.habitLabel(sp.habitId)} · post-dinner rise {r.effect} mg/dL
-                  lower · early signal
-                </p>
-                <Btn
-                  secondary
-                  onClick={() =>
-                    share("Family habit card", E.habitLabel(sp.habitId))
-                  }
-                >
-                  Send habit to family cook
-                </Btn>
-              </Card>
-            ) : null;
-          })}
-          {pr?.ready && (
-            <Card title="Day-90 Proof">
-              <p>
-                <SourceBadge row={pr.latest!} source="lab" />{" "}
-                {pr.baseline!.value}% → {pr.latest!.value}% · change {pr.delta}{" "}
-                points
-              </p>
-              <Btn onClick={() => go("/caregiver/billing")}>Renew care</Btn>
-            </Card>
-          )}
-        </>
+        ),
       )}
     </Shell>
   );
 }
+
 function Connect() {
   const { s, mutate, toast, go, askConfirm, askText } = useApp();
   const [id, setId] = useState("");
@@ -7509,6 +7420,7 @@ export default function App() {
       ) : (
         <Desk />
       );
+  else if (page === "updates") content = <Notifications />;
   else if (page === "log") content = <Log />;
   else if (page === "sugar-detective") content = <Sprint />;
   else if (page === "weekly") content = <Weekly />;

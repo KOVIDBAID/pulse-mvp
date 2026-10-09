@@ -29,8 +29,7 @@
     },
     "routes": [
       "/caregiver/home",
-      "/caregiver/alerts",
-      "/caregiver/notes",
+      "/caregiver/updates",
       "/caregiver/billing",
       "/caregiver/connect",
       "/caregiver/family",

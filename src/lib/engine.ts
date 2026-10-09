@@ -569,6 +569,20 @@ export function canNudge(s: State, pid: string, type: string, sprint = false) {
   );
   return prior.length < (sprint ? 3 : 2);
 }
+export const RULE_LABELS: Record<string, string> = {
+  S1: "Very low sugar",
+  S2: "Low sugar",
+  S3: "Repeat low",
+  S4: "Low fasting pattern",
+  S5: "Very high sugar",
+  S6: "Possible heart or stroke warning",
+  S7: "Crisis support",
+  W3: "Week-3 support call",
+  P0: "Urgent",
+  P1: "Within 72 h",
+  P2: "Routine",
+};
+export const ruleLabel = (rule: string) => RULE_LABELS[rule] || rule;
 export function notify(
   s: State,
   pid: string,
@@ -592,9 +606,7 @@ export function notify(
     read: false,
     link,
     status: queued ? "queued" : "sent",
-    push: audience.startsWith("CG")
-      ? category === "alerts" || category === "summary"
-      : true,
+    push: audience.startsWith("CG") ? category === "alerts" : true,
   });
 }
 export function alert(
