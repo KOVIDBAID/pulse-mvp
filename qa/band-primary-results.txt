@@ -1,0 +1,45 @@
+Verified owned production preview: http://127.0.0.1:5175
+PASS route: /patient/home
+PASS route: /patient/progress
+PASS route: /patient/records
+PASS route: /patient/doctor
+PASS route: /patient/log
+PASS route: /patient/sugar-detective
+PASS route: /patient/mood
+PASS route: /patient/myth
+PASS route: /patient/notes
+PASS route: /patient/family
+PASS route: /patient/billing
+PASS route: /patient/settings
+PASS route: /patient/help
+PASS favicon
+PASS route: /caregiver/home
+PASS route: /caregiver/alerts
+PASS route: /caregiver/notes
+PASS route: /caregiver/billing
+PASS route: /caregiver/connect
+PASS route: /caregiver/family
+PASS route: /caregiver/myth
+PASS route: /caregiver/settings
+PASS route: /caregiver/help
+PASS favicon
+PASS route: /doctor/home
+PASS route: /doctor/patients
+PASS route: /doctor/messages
+PASS route: /doctor/appointments
+PASS route: /doctor/outcomes
+PASS route: /doctor/settings
+PASS route: /doctor/help
+PASS favicon
+PASS route: /team/desk
+PASS route: /team/settings
+PASS route: /team/help
+PASS favicon
+Sweep: 0 failures
+PASS 9:30 PM medicine slot: 1 taps, 0 typed fields, 0 PIN fields (budget 2)
+FAIL prescribed fasting reading by hand, including entry navigation: 5 taps, 0 typed fields, 0 PIN fields (budget 4); budget 4 taps / 0 typed fields exceeded
+PASS automatic meter reading: 0 taps, 0 typed fields, 0 PIN fields (budget 0)
+PASS caregiver status after launch login: 0 taps, 0 typed fields, 0 PIN fields (budget 0)
+PASS doctor renews Ramesh from Today: 2 taps, 0 typed fields, 1 PIN fields (budget 3)
+Friction: 1 failing journeys (budgets remain strict; F3–F7 work is separate)
+Owned preview stopped

@@ -23,7 +23,7 @@ async function fresh(pid = "PUL-KNP-0001") {
     pid,
   );
   await page.reload();
-  await page.goto(base + "/#/patient/progress");
+  await page.goto(base + "/#/patient/settings");
   await page.waitForTimeout(350);
   return { context, page };
 }
@@ -156,6 +156,8 @@ try {
     await page.locator(".freshness.stale").innerText(),
     /not synced for 3 days/,
   );
+  await page.goto(base + "/#/patient/settings");
+  await page.waitForTimeout(250);
   await page
     .getByRole("button", { name: "Disconnect Health Connect", exact: true })
     .click();

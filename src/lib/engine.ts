@@ -13,7 +13,8 @@ export type DataSource =
   | "meter-sync"
   | "meter-photo"
   | "typed"
-  | "lab";
+  | "lab"
+  | "health-connect";
 export type Row = {
   id: string;
   day: number;
@@ -36,6 +37,9 @@ export type Patient = {
   deleted: boolean;
   habitId: HabitId | null;
   sugarDetectivePrescribed?: boolean;
+  bandOwned?: boolean;
+  payerId?: string;
+  largeText?: boolean;
   consents: Record<string, boolean>;
   target: number;
   mobile: string;
@@ -53,6 +57,7 @@ export type HealthConnection = {
   permissions: HealthPermissions;
   lastSync: number | null;
   syncGapUntil?: number;
+  devices?: { scale: boolean; bpCuff: boolean };
 };
 export type WellnessDay = Row & {
   source: "band";
@@ -119,6 +124,8 @@ export type State = {
   consentLog: Row[];
   doses: Row[];
   water: Row[];
+  metrics: Row[];
+  walks: Row[];
   band: Row[];
   wellness: WellnessDay[];
   healthConnect: Record<string, HealthConnection>;
@@ -1005,6 +1012,8 @@ export function seed(): State {
     consentLog: [],
     doses: [],
     water: [],
+    metrics: [],
+    walks: [],
     band: [],
     wellness: seedWellness(P),
     healthConnect: {},
@@ -1064,6 +1073,8 @@ export function seed(): State {
       insulin: false,
       deleted: false,
       sugarDetectivePrescribed: i === 1,
+      bandOwned: i === 1 ? true : false,
+      payerId: i === 1 ? "CG-0001" : id,
       habitId: i === 1 ? "walk_after_dinner" : null,
       target: 7,
       mobile: i === 1 ? "9876543210" : `987654${String(i).padStart(4, "0")}`,
@@ -1485,6 +1496,8 @@ export function migrateState(value: any): State {
 /** Backfill provenance without changing rules, consent or saved values. */
 export function normalizeDeviceState(s: State): State {
   s.healthConnect ||= {};
+  s.metrics ||= [];
+  s.walks ||= [];
   s.wellness ||= seedWellness(P);
   for (const r of s.readings) {
     r.source ||= "typed";

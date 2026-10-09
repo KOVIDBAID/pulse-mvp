@@ -1,5 +1,6 @@
 import * as E from "./engine";
 import * as HC from "./healthConnect";
+import * as DS from "./dataSources";
 export function selfTests() {
   const results: {
     group: string;
@@ -763,6 +764,55 @@ export function selfTests() {
         E.patient(s, E.P).sugarDetectivePrescribed === true &&
         !E.patient(s, "PUL-KNP-0002").sugarDetectivePrescribed
       );
+    },
+  );
+  test("sources", "One gentle notice per 72-hour sync outage", true, () => {
+    const s = E.seed();
+    E.patient(s).consents.band = true;
+    HC.connect(s, { ...HC.emptyPermissions(), steps: true });
+    s.healthConnect[E.P].lastSync = E.now(s) - 4320;
+    HC.staleBandNotice(s, E.P);
+    HC.staleBandNotice(s, E.P);
+    return (
+      s.notifications.filter((n) => n.id.startsWith("BAND-STALE-")).length === 1
+    );
+  });
+  test(
+    "sources",
+    "Band has priority over manual walks; no hydration fallback",
+    true,
+    () => {
+      const s = E.seed();
+      E.patient(s).consents.band = true;
+      HC.connect(s, { ...HC.emptyPermissions(), steps: true });
+      const r = HC.wellness(s).at(-1)!;
+      r.stepsAfterDinner = 1600;
+      HC.recordWellness(s, r);
+      s.walks.push({
+        ...E.stamp(s),
+        id: "tap",
+        patientId: E.P,
+        day: r.day,
+        time: r.time,
+        source: "typed",
+        value: 0,
+      });
+      return DS.walk(s, E.P, r.day).done && !DS.value(s, "hydration");
+    },
+  );
+  test(
+    "sources",
+    "Fresh typed low cannot be hidden by older meter data",
+    true,
+    () => {
+      const s = E.seed();
+      E.recordReading(s, {
+        value: 128,
+        source: "meter-sync",
+        measuredAt: E.now(s) - 1,
+      });
+      E.recordReading(s, { value: 52, source: "typed" });
+      return DS.value(s, "glucose")?.value === 52;
     },
   );
   return results;

@@ -38,6 +38,7 @@ import {
 import { FEATURES, featureVisible } from "./app/features";
 import * as E from "./lib/engine";
 import * as HC from "./lib/healthConnect";
+import * as DS from "./lib/dataSources";
 import { selfTests } from "./lib/selfTests";
 import "./extended.css";
 import "./mvp.css";
@@ -435,7 +436,9 @@ function Settings() {
     <Shell title="Settings">
       <EmbeddedViews>
         <Utility kind="settings" />
-        {FEATURES.wellnessBand && s.session.role === "patient" && <Band />}
+        {FEATURES.wellnessBand && s.session.role === "patient" && (
+          <ConnectedDevices />
+        )}
       </EmbeddedViews>
     </Shell>
   );
@@ -818,11 +821,7 @@ function PatientHome() {
         </Card>
       )}
       <DoseList pid={p.id} />
-      {FEATURES.wellnessBand && (
-        <EmbeddedViews>
-          <Band />
-        </EmbeddedViews>
-      )}
+      {FEATURES.wellnessBand && <YourDay />}
       <Card title={pr.ready ? "Your effort, in numbers" : "Your next step"}>
         {pr.ready ? (
           <p>
@@ -846,10 +845,10 @@ function PatientHome() {
       <div className="m-grid">
         <Card title="Latest reading">
           <strong className="big-number">
-            {readings.at(-1)?.value ?? "—"}
+            {DS.value(s, "glucose")?.value ?? "—"}
           </strong>
           <p>mg/dL</p>
-          <SourceBadge row={readings.at(-1)} />
+          <SourceBadge row={DS.value(s, "glucose")} />
           <Btn secondary onClick={() => go("/patient/log/glucose")}>
             Log glucose
           </Btn>
@@ -1896,7 +1895,7 @@ function Progress() {
       <Water />
       <EmbeddedViews>
         <Billing proofOnly />
-        {FEATURES.wellnessBand && <Band />}
+        {FEATURES.wellnessBand && <YourDay />}
       </EmbeddedViews>
     </Shell>
   );
@@ -3100,6 +3099,12 @@ function Caregiver({ alertsOnly = false }: { alertsOnly?: boolean } = {}) {
               <p>Only categories the patient approved are shown.</p>
             </Card>
           )}
+          {E.allow(s, user, pid, "wellness") && DS.summary(s, pid) && (
+            <Card title="Weekly wellness">
+              <p>From band · wellness only · Demo</p>
+              <p>{DS.summary(s, pid)}</p>
+            </Card>
+          )}
           {encourage && (
             <Card title="Encourage">
               <p>
@@ -4002,6 +4007,15 @@ function DoctorPatient() {
           {tab === "overview" ? (
             <>
               {moodView}
+              {E.allow(s, user, pid, "wellness") && DS.summary(s, pid) && (
+                <Card title="Wellness brief">
+                  <p>From band · wellness only · Demo</p>
+                  <p>{DS.summary(s, pid)}</p>
+                  <p>
+                    Band adherence: {DS.week(s, pid).bandDays}/7 days with data
+                  </p>
+                </Card>
+              )}
               <Card title="Since last in-person visit">
                 <p>
                   {p.inPerson === null
@@ -5150,11 +5164,13 @@ function Impact() {
     </Shell>
   );
 }
-function Band() {
+function Band({ settings = false }: { settings?: boolean } = {}) {
   const { s, mutate, askConfirm } = useApp();
   const p = E.patient(s),
     c = s.healthConnect?.[p.id];
-  const [sheet, setSheet] = useState(false);
+  const [sheet, setSheet] = useState(
+    settings && location.hash.includes("connect=1"),
+  );
   const [permissions, setPermissions] = useState<E.HealthPermissions>(
     HC.connect(),
   );
@@ -5165,7 +5181,8 @@ function Band() {
     ([key]) => key !== "bloodGlucose" && permitted[key],
   );
   const fresh = HC.freshness(s, c?.lastSync);
-  if (!FEATURES.wellnessBand) return null;
+  if (!FEATURES.wellnessBand || (!settings && E.patient(s).bandOwned === false))
+    return null;
   const open = () => {
     setPermissions(HC.connect());
     setSheet(true);
@@ -5365,6 +5382,75 @@ function Band() {
     </Shell>
   );
 }
+function ConnectedDevices() {
+  const { s, mutate } = useApp();
+  const p = E.patient(s),
+    c = s.healthConnect?.[p.id];
+  return (
+    <section className="connected-devices">
+      <h2>Connected devices</h2>
+      <Band settings />
+      <Card title="Glucometer sync · Demo">
+        <Toggle
+          label="Glucometer auto-sync"
+          on={c?.permissions.bloodGlucose}
+          onChange={() =>
+            mutate((s) => {
+              const conn = (s.healthConnect[p.id] ||= {
+                connected: true,
+                permissions: HC.emptyPermissions(),
+                lastSync: null,
+              });
+              conn.permissions.bloodGlucose = !conn.permissions.bloodGlucose;
+              conn.connected = true;
+              HC.sync(s, p.id);
+            })
+          }
+        />
+        <p>Device changes keep your clinical history.</p>
+      </Card>
+      <Card title="Scale / BP cuff (optional) · Demo">
+        {(
+          [
+            ["scale", "Connected scale"],
+            ["bpCuff", "Connected BP cuff"],
+          ] as const
+        ).map(([key, label]) => (
+          <Toggle
+            key={key}
+            label={label}
+            on={c?.devices?.[key]}
+            onChange={() =>
+              mutate((s) => HC.setDevice(s, key, !c?.devices?.[key], p.id))
+            }
+          />
+        ))}
+      </Card>
+    </section>
+  );
+}
+function YourDay() {
+  const { s, mutate } = useApp();
+  const text = DS.summary(s);
+  const c = s.healthConnect?.[s.session.patientId];
+  if (!text) return null;
+  const stale = c?.lastSync != null && E.now(s) - c.lastSync >= 1440;
+  return (
+    <Card title="Your day">
+      <p>
+        {text} · Band, {HC.freshness(s, c?.lastSync).text} · Demo
+      </p>
+      {stale && (
+        <p className="freshness stale">
+          Band not synced since yesterday — open your band app{" "}
+          <Btn secondary onClick={() => mutate((s) => HC.sync(s))}>
+            Sync now
+          </Btn>
+        </p>
+      )}
+    </Card>
+  );
+}
 function SourceBadge({ row, source }: { row?: E.Row; source?: E.DataSource }) {
   const { s } = useApp();
   const src = source || row?.source || "typed";
@@ -5375,7 +5461,9 @@ function SourceBadge({ row, source }: { row?: E.Row; source?: E.DataSource }) {
         ? "Lab"
         : src === "typed"
           ? "You"
-          : "Meter";
+          : src === "health-connect"
+            ? "Device"
+            : "Meter";
   const device = src === "band" || src === "meter-sync";
   const at = row?.lastSync ?? (row ? E.minutes(row.day, row.time) : null);
   const fresh = HC.freshness(s, at);
@@ -5633,7 +5721,7 @@ function Auth({ role }: { role: E.Role }) {
       login(role, matching?.id);
     }
   };
-  const finish = () => {
+  const finish = (bandOwned = false) => {
     mutate((s) => {
       const id = `PUL-KNP-${String(s.patients.length + 1).padStart(4, "0")}`;
       s.patients.push({
@@ -5652,6 +5740,8 @@ function Auth({ role }: { role: E.Role }) {
         insulin,
         deleted: false,
         habitId: null,
+        bandOwned,
+        payerId: id,
         consents: { ...consents, sprint: !!consents.sprint && meter },
         target: 7,
         mobile,
@@ -5679,7 +5769,7 @@ function Auth({ role }: { role: E.Role }) {
         phone: safetyPhone,
       };
     });
-    go("/patient/home");
+    go(bandOwned ? "/patient/settings?connect=1" : "/patient/home");
   };
   return (
     <div className="m-auth">
@@ -6006,13 +6096,16 @@ function Auth({ role }: { role: E.Role }) {
               </>
             ) : (
               <>
-                <h2>Your first 90 days</h2>
+                <h2>Connect your band</h2>
+                <Badge>Recommended</Badge>
                 <p>
-                  Baseline → six-evening experiment → weekly support → verified
-                  HbA1c Proof Card. Family can request access after you enrol;
-                  you approve it yourself.
+                  Your band fills your day automatically. Pulse works fully
+                  without one. Device permissions remain your choice.
                 </p>
-                <Btn onClick={finish}>Finish registration</Btn>
+                <Btn onClick={() => finish(true)}>Connect band</Btn>
+                <Btn secondary onClick={() => finish(false)}>
+                  I don’t have a band
+                </Btn>
               </>
             )}
             <Btn secondary onClick={() => setStep(step - 1)}>
@@ -6162,7 +6255,10 @@ function Demo() {
         } else permissions.bloodGlucose = true;
         HC.connect(s, permissions, E.P);
         if (kind === "Band: 3 poor-sleep nights") HC.poorSleep(s);
-        if (kind === "Band: sync gap 3 days") HC.syncGap(s);
+        if (kind === "Band: sync gap 3 days") {
+          HC.syncGap(s);
+          HC.staleBandNotice(s);
+        }
         if (kind.startsWith("Meter auto-sync:"))
           HC.ingestMeter(
             s,
@@ -6625,7 +6721,10 @@ export default function App() {
     hcConnection = s.healthConnect?.[hcPatient];
   useEffect(() => {
     if (FEATURES.wellnessBand || FEATURES.meterAutoSync)
-      mutate((s) => HC.sync(s, hcPatient, FEATURES.meterAutoSync));
+      mutate((s) => {
+        HC.sync(s, hcPatient, FEATURES.meterAutoSync);
+        HC.staleBandNotice(s, hcPatient);
+      });
   }, [
     s.sim.day,
     s.sim.time,

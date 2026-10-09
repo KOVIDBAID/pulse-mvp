@@ -29,6 +29,7 @@ export function connect(
     connected: true,
     permissions: { ...permissions },
     lastSync: null,
+    devices: s.healthConnect[pid]?.devices,
   };
   s.consentLog.push({
     id: E.uid("HC-CONSENT"),
@@ -37,6 +38,11 @@ export function connect(
     action: "Health Connect permissions allowed (Demo)",
     permissions: { ...permissions },
   });
+  E.patient(s, pid).bandOwned = Object.entries(permissions).some(
+    ([key, v]) => key !== "bloodGlucose" && v,
+  )
+    ? true
+    : E.patient(s, pid).bandOwned;
   sync(s, pid);
 }
 export function wellness(
@@ -149,6 +155,24 @@ export function sync(
         pid,
       );
   }
+  for (const [key, metric, val] of [
+    ["scale", "weight", 73.2],
+    ["bpCuff", "bp", "128/78"],
+  ] as const)
+    if (
+      c.devices?.[key] &&
+      !s.metrics.some((r) => r.id === `HC-${key}-${pid}-${s.sim.day}`)
+    )
+      s.metrics.push({
+        id: `HC-${key}-${pid}-${s.sim.day}`,
+        patientId: pid,
+        ...E.stamp(s),
+        source: "health-connect",
+        metric,
+        value: val,
+        measuredAt: E.now(s),
+        device: key,
+      });
   c.lastSync = E.now(s);
 }
 export function disconnect(
@@ -227,4 +251,54 @@ function permittedRow(
     spo2Min: p.oxygen ? row.spo2Min : null,
     hydrationMl: p.hydration ? row.hydrationMl : null,
   };
+}
+
+export function staleBandNotice(s: E.State, pid = s.session.patientId) {
+  const p = E.patient(s, pid),
+    c = s.healthConnect?.[pid];
+  if (
+    p?.deleted ||
+    p?.bandOwned === false ||
+    !p?.consents.band ||
+    !c ||
+    c.lastSync == null ||
+    !Object.entries(c.permissions).some(
+      ([key, v]) => key !== "bloodGlucose" && v,
+    ) ||
+    E.now(s) - c.lastSync < 4320
+  )
+    return;
+  E.notify(
+    s,
+    pid,
+    pid,
+    "wellness",
+    "Band sync reminder",
+    "Band not synced since yesterday — open your band app",
+    `BAND-STALE-${pid}-${c.lastSync}`,
+    "settings",
+  );
+}
+export function setDevice(
+  s: E.State,
+  device: "scale" | "bpCuff",
+  allowed: boolean,
+  pid = s.session.patientId,
+) {
+  const c = (s.healthConnect[pid] ||= {
+    connected: true,
+    permissions: emptyPermissions(),
+    lastSync: null,
+  });
+  c.devices ||= { scale: false, bpCuff: false };
+  c.devices[device] = allowed;
+  s.consentLog.push({
+    id: E.uid("DEVICE"),
+    patientId: pid,
+    ...E.stamp(s),
+    device,
+    allowed,
+    action: "Connected device permission (Demo)",
+  });
+  if (allowed) sync(s, pid);
 }
