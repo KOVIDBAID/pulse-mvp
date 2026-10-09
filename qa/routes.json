@@ -16,7 +16,6 @@
       "/patient/myth",
       "/patient/notes",
       "/patient/family",
-      "/patient/billing",
       "/patient/settings",
       "/patient/help"
     ]
@@ -35,7 +34,8 @@
       "/caregiver/family",
       "/caregiver/myth",
       "/caregiver/settings",
-      "/caregiver/help"
+      "/caregiver/help",
+      "/caregiver/home?switch=1"
     ]
   },
   {
@@ -51,7 +51,12 @@
       "/doctor/appointments",
       "/doctor/outcomes",
       "/doctor/settings",
-      "/doctor/help"
+      "/doctor/help",
+      "/doctor/patient/PUL-KNP-0001/overview",
+      "/doctor/patient/PUL-KNP-0001/charts",
+      "/doctor/patient/PUL-KNP-0001/records",
+      "/doctor/patient/PUL-KNP-0001/prescriptions",
+      "/doctor/patient/PUL-KNP-0001/messages"
     ]
   },
   {
@@ -64,6 +69,27 @@
       "/team/desk",
       "/team/settings",
       "/team/help"
+    ]
+  },
+  {
+    "session": {
+      "role": "patient",
+      "userId": "PUL-KNP-0002",
+      "patientId": "PUL-KNP-0002"
+    },
+    "routes": [
+      "/patient/home",
+      "/patient/progress",
+      "/patient/records",
+      "/patient/doctor",
+      "/patient/log",
+      "/patient/mood",
+      "/patient/myth",
+      "/patient/notes",
+      "/patient/family",
+      "/patient/billing",
+      "/patient/settings",
+      "/patient/help"
     ]
   }
 ]

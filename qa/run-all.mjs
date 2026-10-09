@@ -21,6 +21,7 @@ if (
         "health-connect",
         "calm",
         "demo-critical",
+        "freeze",
       ].includes(name),
   )
 )

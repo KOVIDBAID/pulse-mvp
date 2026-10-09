@@ -3042,7 +3042,7 @@ function Billing({ proofOnly = false }: { proofOnly?: boolean }) {
     .at(-1);
   const [upi, setUpi] = useState("amit@demo");
   const [waiting, setWaiting] = useState(false);
-  const price = pr.guarantee ? 0 : pr.maintenance ? 1499 : 1199;
+  const price = pr.guarantee ? 0 : E.SUBSCRIPTION_PRICE;
   const pay = (success: boolean) => {
     mutate((s) => {
       if (
@@ -5742,257 +5742,276 @@ function Impact() {
   const doctor = s.session.role === "doctor";
   return (
     <Shell title={doctor ? "Practice outcomes" : "Impact console"}>
-      {doctor && (
-        <div className="m-grid">
-          <Card title="Linked patients">
-            <strong className="big-number">
-              {
-                s.patients.filter((p) =>
-                  E.allow(s, s.session.userId, p.id, "readings"),
-                ).length
-              }
-            </strong>
-          </Card>
-          <Card title="Needs review">
-            <strong className="big-number">
-              {
-                s.alerts.filter(
-                  (a) =>
-                    E.visible(a, s) &&
-                    a.delivery !== "queued" &&
-                    a.status !== "resolved" &&
-                    !a.reviewedBy &&
-                    E.allow(
-                      s,
-                      s.session.userId,
-                      a.patientId,
-                      a.private ? "mood" : "readings",
-                    ),
-                ).length
-              }
-            </strong>
-          </Card>
+      <section className={doctor ? "practice-outcomes" : undefined}>
+        {doctor && (
+          <div className="m-hero">
+            <h1>Practice outcomes</h1>
+            <p>Synthetic demo cohort — illustrative, not real results</p>
+          </div>
+        )}
+        {doctor && (
+          <div className="m-grid">
+            <Card title="Linked patients">
+              <strong className="big-number">
+                {
+                  s.patients.filter((p) =>
+                    E.allow(s, s.session.userId, p.id, "readings"),
+                  ).length
+                }
+              </strong>
+            </Card>
+            <Card title="Needs review">
+              <strong className="big-number">
+                {
+                  s.alerts.filter(
+                    (a) =>
+                      E.visible(a, s) &&
+                      a.delivery !== "queued" &&
+                      a.status !== "resolved" &&
+                      !a.reviewedBy &&
+                      E.allow(
+                        s,
+                        s.session.userId,
+                        a.patientId,
+                        a.private ? "mood" : "readings",
+                      ),
+                  ).length
+                }
+              </strong>
+            </Card>
+          </div>
+        )}
+        <Card title="Week-3 passive habit metric · Demo">
+          {s.patients.slice(0, 2).map((p) => (
+            <p key={p.id}>
+              {p.name}: {DS.week(s, p.id, p.start + 20).walks}/7 days ·{" "}
+              {DS.week(s, p.id, p.start + 20).walks >= 4
+                ? "Kept habit"
+                : "Support offered"}{" "}
+              · <SourceBadge source={DS.week(s, p.id, p.start + 20).source} />
+            </p>
+          ))}
+        </Card>
+        {!doctor && (
+          <div className="m-hero">
+            <h1>Measured change, sustainable care</h1>
+            <p>Synthetic demo cohort — illustrative, not real results</p>
+          </div>
+        )}
+        <div className="m-tabs">
+          {[
+            "Metrics chain",
+            "Growth loops",
+            "Safety counter-metrics",
+            "Partner",
+            "Proof plan",
+          ].map((t) => (
+            <button
+              key={t}
+              className={tab === t ? "active" : ""}
+              onClick={() => setTab(t)}
+            >
+              {t}
+            </button>
+          ))}
         </div>
-      )}
-      <Card title="Week-3 passive habit metric · Demo">
-        {s.patients.slice(0, 2).map((p) => (
-          <p key={p.id}>
-            {p.name}: {DS.week(s, p.id, p.start + 20).walks}/7 days ·{" "}
-            {DS.week(s, p.id, p.start + 20).walks >= 4
-              ? "Kept habit"
-              : "Support offered"}{" "}
-            · <SourceBadge source={DS.week(s, p.id, p.start + 20).source} />
+        <Card>
+          <Badge>Synthetic demo cohort — illustrative, not real results</Badge>
+          <div className="m-grid">
+            <Select
+              label="Clinic"
+              value={doctor ? "1" : clinic}
+              onChange={setClinic}
+              options={
+                doctor
+                  ? [["1", "KNP-VERMA-01"]]
+                  : [
+                      ["all", "All clinics"],
+                      ...Array.from({ length: 12 }, (_, i) => [
+                        String(i + 1),
+                        `Clinic ${i + 1}`,
+                      ]),
+                    ]
+              }
+            />
+            <Select
+              label="Cohort month"
+              value={month}
+              onChange={setMonth}
+              options={[
+                ["all", "All cohorts"],
+                ["1", "July"],
+                ["2", "August"],
+                ["3", "September"],
+              ]}
+            />
+          </div>
+          <p>
+            Denominator: {n} enrolled · dropout counted as not improved (ITT).
+            Leading metric: ≥4 of 7 after-dinner walks ·{" "}
+            {rows.filter((r) => r.habitSource === "band").length} Band /{" "}
+            {rows.filter((r) => r.habitSource === "typed").length} You. Demo
+            cohort days are synthetic; current patients use their permitted band
+            records or walk taps.
           </p>
-        ))}
-      </Card>
-      <div className="m-hero">
-        <h1>Measured change, sustainable care</h1>
-        <p>Synthetic demo cohort — illustrative, not real results</p>
-      </div>
-      <div className="m-tabs">
-        {[
-          "Metrics chain",
-          "Growth loops",
-          "Safety counter-metrics",
-          "Partner",
-          "Proof plan",
-        ].map((t) => (
-          <button
-            key={t}
-            className={tab === t ? "active" : ""}
-            onClick={() => setTab(t)}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
-      <Card>
-        <Badge>Synthetic demo cohort — illustrative, not real results</Badge>
-        <div className="m-grid">
-          <Select
-            label="Clinic"
-            value={doctor ? "1" : clinic}
-            onChange={setClinic}
-            options={
-              doctor
-                ? [["1", "KNP-VERMA-01"]]
-                : [
-                    ["all", "All clinics"],
-                    ...Array.from({ length: 12 }, (_, i) => [
-                      String(i + 1),
-                      `Clinic ${i + 1}`,
-                    ]),
-                  ]
-            }
-          />
-          <Select
-            label="Cohort month"
-            value={month}
-            onChange={setMonth}
-            options={[
-              ["all", "All cohorts"],
-              ["1", "July"],
-              ["2", "August"],
-              ["3", "September"],
-            ]}
-          />
-        </div>
-        <p>
-          Denominator: {n} enrolled · dropout counted as not improved (ITT).
-          Leading metric: ≥4 of 7 after-dinner walks ·{" "}
-          {rows.filter((r) => r.habitSource === "band").length} Band /{" "}
-          {rows.filter((r) => r.habitSource === "typed").length} You. Demo
-          cohort days are synthetic; current patients use their permitted band
-          records or walk taps.
-        </p>
-      </Card>
-      {tab === "Metrics chain" ? (
-        <>
-          <div className="metric-chain">
+        </Card>
+        {tab === "Metrics chain" ? (
+          <>
+            <div className="metric-chain">
+              {[
+                [
+                  "Leading",
+                  `${pct(kept)}%`,
+                  `${kept}/${n} kept habit in Week 3 · target 45%`,
+                ],
+                [
+                  "North Star",
+                  `${pct(improved)}%`,
+                  `${improved}/${n} HbA1c down ≥0.5 · target 35%`,
+                ],
+                [
+                  "Business",
+                  `${pct(renewed)}%`,
+                  `${renewed}/${n} renewed · target 50%`,
+                ],
+                [
+                  "Partner",
+                  `${delta.toFixed(2)}`,
+                  "Mean HbA1c reduction points",
+                ],
+              ].map(([title, val, desc]) => (
+                <Card key={title} title={title}>
+                  <strong className="big-number">{val}</strong>
+                  <p>{desc}</p>
+                </Card>
+              ))}
+            </div>
+            <Card title="Conditional rates">
+              <p>
+                Improved among kept-habit group:{" "}
+                {pct(rows.filter((r) => r.kept && r.improved).length, kept)}%
+              </p>
+              <p>
+                Improved among other patients:{" "}
+                {pct(
+                  rows.filter((r) => !r.kept && r.improved).length,
+                  n - kept,
+                )}
+                %
+              </p>
+              <p>
+                Renewed among improvers:{" "}
+                {pct(
+                  rows.filter((r) => r.improved && r.renewed).length,
+                  improved,
+                )}
+                %
+              </p>
+              <p>
+                Simulated usual-care comparator:{" "}
+                {E.comparator().filter((r) => r.improved).length}/120 (
+                {pct(E.comparator().filter((r) => r.improved).length, 120)}%) ·
+                associations in this synthetic model are illustrative.
+              </p>
+              <p>Not success metrics here: downloads, sign-ups, app opens.</p>
+            </Card>
+          </>
+        ) : tab === "Growth loops" ? (
+          <div className="m-grid">
             {[
               [
-                "Leading",
-                `${pct(kept)}%`,
-                `${kept}/${n} kept habit in Week 3 · target 45%`,
+                "Clinic loop",
+                `${(n / new Set(rows.map((r) => r.clinic)).size || 0).toFixed(1)} enrolled per clinic (selected cohort)`,
               ],
-              [
-                "North Star",
-                `${pct(improved)}%`,
-                `${improved}/${n} HbA1c down ≥0.5 · target 35%`,
-              ],
-              [
-                "Business",
-                `${pct(renewed)}%`,
-                `${renewed}/${n} renewed · target 50%`,
-              ],
-              ["Partner", `${delta.toFixed(2)}`, "Mean HbA1c reduction points"],
-            ].map(([title, val, desc]) => (
+              ["Proof-card loop", `${count("shared")} shares → new families`],
+              ["Sibling co-care", `${count("invite")} sibling invites`],
+              ["Myth-card loop", `${count("forward")} forwards`],
+            ].map(([title, text]) => (
               <Card key={title} title={title}>
-                <strong className="big-number">{val}</strong>
-                <p>{desc}</p>
+                <p>{text}</p>
               </Card>
             ))}
-          </div>
-          <Card title="Conditional rates">
-            <p>
-              Improved among kept-habit group:{" "}
-              {pct(rows.filter((r) => r.kept && r.improved).length, kept)}%
-            </p>
-            <p>
-              Improved among other patients:{" "}
-              {pct(rows.filter((r) => !r.kept && r.improved).length, n - kept)}%
-            </p>
-            <p>
-              Renewed among improvers:{" "}
-              {pct(
-                rows.filter((r) => r.improved && r.renewed).length,
-                improved,
-              )}
-              %
-            </p>
-            <p>
-              Simulated usual-care comparator:{" "}
-              {E.comparator().filter((r) => r.improved).length}/120 (
-              {pct(E.comparator().filter((r) => r.improved).length, 120)}%) ·
-              associations in this synthetic model are illustrative.
-            </p>
-            <p>Not success metrics here: downloads, sign-ups, app opens.</p>
-          </Card>
-        </>
-      ) : tab === "Growth loops" ? (
-        <div className="m-grid">
-          {[
-            [
-              "Clinic loop",
-              `${(n / new Set(rows.map((r) => r.clinic)).size || 0).toFixed(1)} enrolled per clinic (selected cohort)`,
-            ],
-            ["Proof-card loop", `${count("shared")} shares → new families`],
-            ["Sibling co-care", `${count("invite")} sibling invites`],
-            ["Myth-card loop", `${count("forward")} forwards`],
-          ].map(([title, text]) => (
-            <Card key={title} title={title}>
-              <p>{text}</p>
+            <Card title="Cohort funnel">
+              <p>
+                {n} enrolled → {kept} kept habit → {n - count("dropout")} tested
+                → {improved} improved → {renewed} renewed
+              </p>
             </Card>
-          ))}
-          <Card title="Cohort funnel">
+          </div>
+        ) : tab === "Safety counter-metrics" ? (
+          <Card title="Safety counter-metrics">
             <p>
-              {n} enrolled → {kept} kept habit → {n - count("dropout")} tested →{" "}
-              {improved} improved → {renewed} renewed
+              {count("hypo")} simulated low events ·{" "}
+              {((count("hypo") / Math.max(1, n * 3)) * 100).toFixed(1)} per 100
+              patient-months
+            </p>
+            <p>{pct(count("callback"))}% callbacks within simulated SLA</p>
+            <p>
+              Sharing opt-outs and notification counts are monitored in the live
+              demo access/notification logs.
             </p>
           </Card>
-        </div>
-      ) : tab === "Safety counter-metrics" ? (
-        <Card title="Safety counter-metrics">
-          <p>
-            {count("hypo")} simulated low events ·{" "}
-            {((count("hypo") / Math.max(1, n * 3)) * 100).toFixed(1)} per 100
-            patient-months
-          </p>
-          <p>{pct(count("callback"))}% callbacks within simulated SLA</p>
-          <p>
-            Sharing opt-outs and notification counts are monitored in the live
-            demo access/notification logs.
-          </p>
-        </Card>
-      ) : tab === "Partner" ? (
-        <Card title="De-identified illustrative calculator">
-          <Field
-            label="Members"
-            type="number"
-            min={1}
-            value={members}
-            onChange={(v: string) => setMembers(Math.max(1, Number(v)))}
-          />
-          <Field
-            label="Insurer annual complication claims per member ₹"
-            type="number"
-            min={0}
-            value={claims}
-            onChange={(v: string) => setClaims(Math.max(0, Number(v)))}
-          />
-          <p>
-            Mean reduction {delta.toFixed(2)} points × 21% ={" "}
-            {(delta * 0.21 * 100).toFixed(1)}% relative association.
-          </p>
-          <p>
-            Illustrative claims amount: ₹
-            {Math.round(members * claims * delta * 0.21).toLocaleString(
-              "en-IN",
-            )}
-          </p>
-          <p>
-            Linear approximation of an observational association — illustrative,
-            not a prediction. UKPDS 35 coefficient supplied in the design brief.
-          </p>
-          <table>
-            <thead>
-              <tr>
-                <th>Anonymous ID</th>
-                <th>Cohort</th>
-                <th>Reduction</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.slice(0, 10).map((r) => (
-                <tr key={r.id}>
-                  <td>DEMO-{r.id}</td>
-                  <td>{r.month}</td>
-                  <td>{r.delta.toFixed(2)}</td>
+        ) : tab === "Partner" ? (
+          <Card title="De-identified illustrative calculator">
+            <Field
+              label="Members"
+              type="number"
+              min={1}
+              value={members}
+              onChange={(v: string) => setMembers(Math.max(1, Number(v)))}
+            />
+            <Field
+              label="Insurer annual complication claims per member ₹"
+              type="number"
+              min={0}
+              value={claims}
+              onChange={(v: string) => setClaims(Math.max(0, Number(v)))}
+            />
+            <p>
+              Mean reduction {delta.toFixed(2)} points × 21% ={" "}
+              {(delta * 0.21 * 100).toFixed(1)}% relative association.
+            </p>
+            <p>
+              Illustrative claims amount: ₹
+              {Math.round(members * claims * delta * 0.21).toLocaleString(
+                "en-IN",
+              )}
+            </p>
+            <p>
+              Linear approximation of an observational association —
+              illustrative, not a prediction. UKPDS 35 coefficient supplied in
+              the design brief.
+            </p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Anonymous ID</th>
+                  <th>Cohort</th>
+                  <th>Reduction</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
-      ) : (
-        <Card title="Proof plan">
-          <p>
-            Intention-to-treat; fresh baseline within 30 days; stepped-wedge
-            clinic rollout comparator; pre-registered analysis; independent
-            analysis partner; report at Day 90/180/360. Claims refer to measured
-            HbA1c change.
-          </p>
-        </Card>
-      )}
+              </thead>
+              <tbody>
+                {rows.slice(0, 10).map((r) => (
+                  <tr key={r.id}>
+                    <td>DEMO-{r.id}</td>
+                    <td>{r.month}</td>
+                    <td>{r.delta.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        ) : (
+          <Card title="Proof plan">
+            <p>
+              Intention-to-treat; fresh baseline within 30 days; stepped-wedge
+              clinic rollout comparator; pre-registered analysis; independent
+              analysis partner; report at Day 90/180/360. Claims refer to
+              measured HbA1c change.
+            </p>
+          </Card>
+        )}
+      </section>
     </Shell>
   );
 }
@@ -7084,7 +7103,7 @@ function Demo() {
           id: E.uid("PAY"),
           patientId: E.P,
           ...E.stamp(s),
-          amount: 1199,
+          amount: E.SUBSCRIPTION_PRICE,
           status: "failed",
         });
       else if (kind === "Caregiver request")

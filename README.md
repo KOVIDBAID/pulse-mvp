@@ -12,6 +12,8 @@ The ZIP includes a production build. With Python 3 installed:
 python3 serve.py
 ```
 
+After `pnpm build`, either `pnpm preview` or `python3 serve.py` runs the production prototype with one command.
+
 Open **http://127.0.0.1:5173/**. If that port is busy, use `python3 serve.py --port 5174`.
 
 Do not open `dist/index.html` directly as a file; the app needs an HTTP server. Fonts are bundled locally; no Google Fonts request is made.
@@ -56,11 +58,11 @@ Guided mode follows these eight steps. It injects the two synthetic glucose exam
 - Offline readings run local safety rules immediately; simulated outbound messages and remote views wait for reconnection.
 - Use synthetic information only. Client-side role guards demonstrate the privacy workflow; they are not production authentication or server-side authorization.
 
-## Tools and simulation boundaries
+## What's simulated
 
 Original design: Figma Make. Implementation completion: Codex. Libraries: React 19, TypeScript, Vite, Tailwind CSS v4, lucide-react, Prettier, local @fontsource fonts (Noto Sans / IBM Plex Sans).
 
-OTP, payments, SMS, doctor verification, meter/document OCR, home collection and band sync are explicitly simulated. Unknown uploads do not undergo live OCR, and uploaded binary files are not retained as a document vault. No live AI API, payment gateway or messaging service is connected. Patient-facing safety copy uses fixed demo templates and the supplied rules.
+Band data and Android Health Connect, meter auto-sync, OTP, SMS, payments, meter/document OCR, doctor verification and home collection are explicitly simulated. Unknown uploads do not undergo live OCR, and uploaded binary files are not retained as a document vault. No live AI API, payment gateway or messaging service is connected. Patient-facing safety copy uses fixed demo templates and the supplied rules.
 
 English PHQ items are included; this English-only version does not need an official Hindi translation. Questionnaire reference: [University of Washington AIMS Center](https://aims.uw.edu/resource/phq-9-depression-scale/).
 
@@ -109,7 +111,7 @@ Source badges distinguish Band, Meter, You and Lab. Sync age turns amber after 7
 
 Additional scenarios: Band: 3 poor-sleep nights; Band: sync gap 3 days; Meter auto-sync: 52; Meter auto-sync: 128 fasting. The two meter scenarios use device timestamps; 52 opens the existing very-low-sugar support screen.
 
-`pnpm qa:friction` measures actual clicks and typed fields; first-time setup/login is excluded. Its initial immutable before record is `qa/friction-baseline.txt`. The automatic-meter journey uses a fixture representing previously granted glucose permission; it counts all subsequent daily actions. `qa/friction-current.txt` records the current result. The current prescribed-check fixture starts on Today at Friday 7:30 AM, where the keypad is already the next action. Its four taps include 1, 2, 8 and Save, with no entry-navigation exemption. All current journeys pass: medicine slot 1 tap, manual reading 4, meter sync 0, caregiver 0, renewal 2 plus PIN.
+`pnpm qa:friction` measures actual clicks and typed fields; first-time setup/login is excluded. Its initial immutable before record is `qa/friction-baseline.txt`. The automatic-meter journey uses a fixture representing previously granted glucose permission; it counts all subsequent daily actions. `qa/friction-current.txt` records the current result. The current prescribed-check fixture starts on Today at Friday 7:30 AM, where the keypad is already the next action. Its four taps include 1, 2, 8 and Save, with no entry-navigation exemption. All current journeys pass: medicine slot 1 tap, manual reading 4, meter sync 0, caregiver 0, renewal 3 plus PIN.
 
 Connector checks: `node qa/run-all.mjs health-connect`. Pure and browser evidence: `qa/health-connect-gates.txt` and `qa/health-connect-results.txt`, using the same browser-path and port environment variables as above.
 
@@ -127,3 +129,17 @@ Today leads with a bundled medicine slot or the due prescribed check, followed b
 Run `node qa/run-all.mjs calm` for the 412×915 morning/evening layouts, no-band path, prescribed experiment visibility and single outage notice. `qa/calm-gates.txt` records all final gates; `qa/patient-today-412x915.png` and `qa/patient-morning-412x915.png` show the two primary states. `qa/baseline.txt` and `qa/friction-baseline.txt` remain immutable before records.
 
 Caregiver Home shows shared family status, with urgent alerts taking the whole screen. Routine Updates never push. Doctor Today shows appointments and at most five review items; Reviewed records the clinician action without resolving the safety event. Renew same previews today’s date and uses the unchanged validation and PIN lock. Every patient screen offers fixed Help phone links. QA: `node qa/run-all.mjs demo-critical ia friction` checks these flows.
+
+## Final freeze — demo-v1
+
+Paid Care Cycle and Maintenance subscriptions are **₹699**. A qualifying guaranteed next cycle remains free. Previous synthetic payment amounts are normalized to ₹699 on load. The original supplied prompt reference is historical; this freeze supersedes its subscription figures.
+
+Open DEMO → Reset demo → Confirm, then DEMO → Start guided demo. The eight-step script above starts at Ramesh Today and ends at Pooja Impact. OTP is **123456**, caregiver/doctor password **demo1234**, and signing PIN **246810**.
+
+`qa/routes.json` lists the actual default identities' visible destinations, including all five doctor patient-profile tabs and the family switcher; Payments is absent from Ramesh’s drawer because Amit is his payer; a second patient fixture covers self-paying Sushma’s Payments and hides her unprescribed Sugar Detective. Final results and known issues are in [QA_REPORT.md](QA_REPORT.md).
+
+## Phase 2
+
+- Server sync and server-side access control for multi-device use.
+- A native Android app reading permissioned Health Connect records.
+- Shorter onboarding.

@@ -1,65 +1,47 @@
-# Validation record — 9 October 2026
+# Pulse demo-v1 — final freeze, 9 October 2026
 
-## Automated checks
+This report supersedes earlier checkpoint reports. No features were added. The two requested product changes are paid subscriptions at ₹699 and doctor Practice Outcomes formatting. Existing safety, privacy, consent, verification and PIN-lock rules remain covered by the unchanged rule suite.
 
-- TypeScript: `tsc --noEmit` passed.
-- Executable rule suite: **62/62 passed** using `tests/run.mjs`; the same suite appears at `#/dev/tests`.
-- Vite production build passed. Source and built assets are included in this delivery.
+## Release gates
 
-Rule coverage includes low/high/LO readings, stale versus fresh readings, repeated low escalation, fasting pattern, Hindi/Hinglish text safety, PHQ routing, sprint effect/sample count, caregiver forbidden-category projection, revoked/deleted/future links, unverified lab exclusion, guarantee/Maintenance, prescribing restrictions/duration validation, anonymous cohort calculations, offline delivery and idempotent time travel.
+| Check | Result | Evidence |
+|---|---|---|
+| Actual visible routes synchronized before the initial sweep | Pass | `qa/routes.json`, `qa/freeze-initial-sweep.txt` |
+| `pnpm typecheck` | Pass | `qa/freeze-gates.txt` |
+| `pnpm test` | 107/107 pass | `qa/freeze-gates.txt` |
+| `pnpm build` | Pass; rebuilt `dist/` included in release | `qa/freeze-gates.txt` |
+| `pnpm qa:static` | No Devanagari outside the allowlist | `qa/freeze-gates.txt` |
+| `pnpm qa` | Zero failures, including console/runtime errors, not-found routes, visible Devanagari and favicon | `qa/freeze-gates.txt` |
+| Eight-step guided demo twice from Reset demo | Both pass; zero console/runtime errors | `qa/freeze-browser.txt` |
+| ₹699 subscription and saved demo payments | Pass; free amount remains ₹0 | `qa/freeze-browser.txt` |
+| Doctor Practice Outcomes, 1440/1000/412px | Equal-width cards, no horizontal page overflow | `qa/freeze-browser.txt`, `qa/practice-outcomes-*.png` |
 
-## Browser checks performed
+The final sweep covers **37 distinct destinations across 48 route visits**. It includes all current bottom-nav/sidebar and drawer destinations, the family switcher, and all five doctor patient-profile tabs. Conditional patient drawers are covered with both Ramesh (Amit pays; prescribed Sugar Detective) and Sushma (self-payer; no prescribed experiment). Hidden or parked routes were not added to the product to satisfy an obsolete list.
 
-- Patient routes: home, log, progress, records, weekly, mood, notes, privacy, data rights, billing, doctor messaging, appointments, tests, myths, notifications, band, profile and help rendered without runtime failures.
-- Caregiver routes: home/care, chooser, connect, permissions, alerts, billing, records, notes, myth, notifications, profile and help; unauthorized privacy/mood deep links were blocked. No seeded PHQ scores/identifiers appeared in caregiver screens.
-- Verified-doctor routes: home, registry, appointments, messages, outcomes and all nine patient-profile sections plus prescription composer rendered. Pending Dr. Saxena was blocked from the patient profile.
-- Team routes: care desk, case review, myth review, impact, outbound log, notifications, profile and help rendered.
-- Changing impact clinic from all clinics (240 enrolled) to Clinic 1 (20) changed all four headline metrics consistently.
-- Prescription preview displayed patient/doctor identity, registration, date/time, mode, diagnosis, generic medicines, strength, pattern, instruction, duration, follow-up and unsigned/signed demo status.
-- Both **14-step guided navigation runs** completed after Reset with no browser console errors.
-- Mobile at **360×800**, including extra-large text: no horizontal page overflow observed on patient home/Sugar Jasoos.
+QA uses an owned production preview on port **5176**, verifies the built HTML, and stops that preview after each run. One earlier attempt found port 5175 occupied; it failed safely and was rerun on 5176. This was an environment startup failure, not an application failure. The original baseline records remain unchanged.
 
-## Core journey verified interactively
+## Guided demo actually exercised
 
-1. Ramesh saved 52 mg/dL → local low-sugar card and simulated local-contact notification.
-2. Amit saw the alert and acknowledged it; Neha saw Amit's ownership and her medicines remained unshared.
-3. Ramesh saved a fresh 100 mg/dL recheck → low alert resolved.
-4. Synthetic Hindi crisis message → private support and care-desk P0 with 60-minute staffed-hours SLA; no caregiver mood notification.
-5. Dr. Verma signed using 246810 → updated patient/caregiver prescription state, with patient confirmation before reminders changed.
-6. Day-90 verified Proof Card → Amit approved synthetic UPI → paid receipt without duplicate payment.
+Each run starts with **DEMO → Reset demo → Confirm**, then **Start guided demo**:
 
-## QA repairs
+1. Ramesh Today.
+2. Meter sync 52 opens safety; the very-low-sugar alert is checked.
+3. Amit acknowledges the urgent alert with “I've spoken to him”.
+4. Ramesh's fresh 100 recheck resolves the low alerts.
+5. Dr. Verma opens Ramesh's Brief from Today.
+6. Renew same is signed with PIN 246810 and delivered.
+7. Ramesh confirms medicine reminders and opens the Proof Card.
+8. Pooja Impact.
 
-- Replaced static read paths and hard-coded results with shared calculations.
-- Removed caregiver mood/private alert fields from data projections and blocked role-prefix deep-link bypasses.
-- Hid undelivered offline readings/alerts from remote-role views; reconnection flushes queued records.
-- Preserved signing-PIN failure lock across route changes.
-- Kept medicine-reminder changes behind patient confirmation.
-- Replaced native confirm/prompt dialogs with accessible in-app sheets.
-- Kept per-tab login sessions separate from shared patient records, fixing a cross-tab guided-demo logout race.
-- Replaced the export's obsolete formatter after detecting its TypeScript corruption.
-- Avoided the initial interactive-frame/loading race, and retained query-bearing registry routes on refresh.
-- Fixed the skip link so it focuses content without changing the hash route.
-- Seeded coherent dose history so time travel does not mark every historical medicine as missed.
+The guide supplies the two synthetic meter/recheck examples. Playwright performs acknowledgement, signing and reminder confirmation through the same controls used by the presenter.
 
-This is targeted hackathon QA, not a production clinical, privacy or accessibility certification. Extended acceptance gaps are listed in `REQUIREMENTS_AUDIT.md`.
+## Known issues retained
 
-## Minimal information architecture verification — 9 October 2026
+- The freeze has no remaining failures in the requested executable gates. It is not a full accessibility, performance or clinical certification.
+- Team Impact still uses the original exported metric-chain styling; narrow desktop metric columns remain outside the explicitly requested doctor-only formatting cleanup. No team layout changes were made.
+- Default synthetic glucose history does not fill every prescribed testing slot, so testing adherence can show 0 completed slots. Existing data and calculations were retained.
+- First-time onboarding remains longer than the friction target; shortening it is Phase 2.
+- Different devices do not synchronize. Same-origin browser tabs share local synthetic state. Production authentication, server authorization and secure document storage are not implemented.
+- Band/Health Connect, meter sync, OTP, SMS, payments, OCR and doctor verification are simulated. No real messaging, medical-device connector or payment gateway is used; uploaded document binaries are not retained.
 
-- `pnpm typecheck`, `pnpm test` (75/75), and `pnpm build`: passed; output in `qa/ia-gates.txt`.
-- `pnpm qa:static`: `No Devanagari outside the allowlist` (`qa/ia-static.txt`).
-- `pnpm qa`: all 35 visible destinations and favicon passed; no not-found or Devanagari failures (`qa/ia-sweep.txt`).
-- Playwright IA check: 26 compatibility redirects, merged feature containers, caregiver report entry, doctor consent and responsive navigation, eight scenario identity/destination pairs, and all fourteen guided steps. Console/runtime errors are checked across those pages (`qa/ia-checks.txt`).
-- Existing click and legacy migration/export checks are included in the same IA run. The QA runner's two ownership/cleanup regression tests passed (`qa/ia-runner.txt`).
-- QA used an owned production preview on port 5175 because the existing development server occupies 5173. The runner verified the built HTML and stopped its preview afterward.
-- Launch was visually checked in the in-app browser; emergency links, role cards and demo entry points are visible. The preview image is `../pulse-minimal-preview.png`.
-
-The guide automates navigation and simulation day selection. Message entry, safety rechecks, signing and mock UPI approval remain presenter actions; this run verifies all fourteen guide destinations rather than claiming those actions happened automatically.
-
-## Friction and Health Connect pack — 9 October 2026
-
-The friction pack supersedes earlier navigation choices. The first commit records the two failing baseline journeys in `qa/friction-baseline.txt`. The current result in `qa/friction-current.txt` has one expected pending failure: manual fasting entry from Today takes five taps against the four-tap limit. F3–F7 are separate future workflow iterations; the test remains strict. The evening medicine slot takes one tap, automatic meter sync zero daily taps after prior permission setup, caregiver status zero taps after login, and prescription renewal two taps plus PIN.
-
-`qa/health-connect-gates.txt` records typecheck, the expanded rule suite, production build and English-only scan. `qa/health-connect-results.txt` records the visible-route sweep, no-band single-card checks, all-OFF sensor switches, separate wellness consent, hidden denied metrics, hydration provenance, amber stale sync, disconnect/retention/deletion, very-low meter safety, compatibility links, all twelve scenarios and the fourteen-step guided navigation. The final guide step now opens the team queue. Existing click and legacy migration checks also run.
-
-A scenario opened while already on its destination exposed a loading-state issue from the demo's intermediate login navigation. Same-route navigation now clears loading; the sync-gap scenario verifies this path. No safety thresholds, caregiver NEVER categories, physician verification or separate mood consent rules changed.
+Extended scope limitations remain in `REQUIREMENTS_AUDIT.md`. The original prompt reference is historical and its older prices are superseded by the ₹699 freeze.

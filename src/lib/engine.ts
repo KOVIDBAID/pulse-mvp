@@ -1,4 +1,5 @@
 import * as DS from "./dataSources";
+export const SUBSCRIPTION_PRICE = 699;
 export const HABITS = {
   walk_after_dinner: "10-minute walk after dinner",
   veg_dal_first: "Vegetables and dal first, roti last",
@@ -1924,6 +1925,10 @@ export function migrateState(value: any): State {
 
 /** Backfill provenance without changing rules, consent or saved values. */
 export function normalizeDeviceState(s: State): State {
+  // Normalize previous synthetic subscription amounts without changing free cycles.
+  for (const payment of s.payments)
+    if ([1199, 1499].includes(payment.amount))
+      payment.amount = SUBSCRIPTION_PRICE;
   s.healthConnect ||= {};
   for (const n of s.notifications)
     if (n.audience?.startsWith("CG"))

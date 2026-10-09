@@ -1424,3 +1424,69 @@ h3 {
 .m-drawer {
   width: min(440px, calc(100% - 48px));
 }
+
+/* Final-freeze formatting: isolate practice metrics from exported chain styles. */
+.practice-outcomes {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+.practice-outcomes > .m-card,
+.practice-outcomes > .m-hero {
+  margin: 0;
+}
+.practice-outcomes .m-grid {
+  align-items: stretch;
+}
+.practice-outcomes .m-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+}
+.practice-outcomes .m-tabs button {
+  flex: 0 1 auto;
+  width: auto;
+}
+.practice-outcomes .metric-chain {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 16px;
+  width: 100%;
+  margin: 0;
+}
+.practice-outcomes .metric-chain > .m-card {
+  min-width: 0;
+  width: auto;
+  margin: 0;
+  padding: 22px;
+}
+.practice-outcomes .metric-chain h2 {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.practice-outcomes .big-number {
+  display: block;
+  margin: 12px 0;
+  line-height: 1.1;
+}
+.practice-outcomes .metric-chain p {
+  margin: 0;
+  line-height: 1.55;
+}
+@media (max-width: 1200px) {
+  .practice-outcomes .metric-chain {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 620px) {
+  .practice-outcomes .metric-chain,
+  .practice-outcomes > .m-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .practice-outcomes {
+    gap: 16px;
+  }
+}

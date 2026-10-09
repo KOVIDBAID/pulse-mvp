@@ -1,0 +1,7 @@
+Verified owned production preview: http://127.0.0.1:5176
+PASS subscription: ₹699; previous synthetic price normalized; free amount retained
+PASS Practice Outcomes: equal-width aligned cards, no page overflow at 1440/1000/412px
+PASS guided demo 1/2: Reset demo → all eight steps, acknowledgement, resolution, PIN renewal, reminder confirmation and Proof Card
+PASS guided demo 2/2: Reset demo → all eight steps, acknowledgement, resolution, PIN renewal, reminder confirmation and Proof Card
+PASS freeze: zero console/runtime errors
+Owned preview stopped
