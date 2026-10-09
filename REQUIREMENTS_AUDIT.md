@@ -78,3 +78,10 @@ The central data-source policy, recommended connection step, device settings, we
 ## Prescribed testing checkpoint
 
 Typed testing plans, starter/doctor seeds, prescription signing controls, plan reminder rebuilding, caregiver aggregate testing adherence, prescription-only Sugar Detective and passive walk metrics are implemented. Low walk adherence queues wellness support, never a clinical band alert. 97 rule checks, typecheck, build and route sweep pass; the existing manual-reading friction failure remains for the next checkpoint.
+
+
+## Calm Today checkpoint — supersedes deferred friction items above
+
+The three requested iterations are implemented: primary band policy with a full no-band path, signed testing schedules/experiments, and calm Today with bundled slots, direct plan-aware entry, conditional ownership, passive walk metrics, computed refill timing, private optional Sunday/mood offers and three-card Progress. Source and freshness information remain visible; scale/BP imports and explicit device permissions are simulated. A skipped-band patient is invited only in Connected devices. Current daily tap counts are 1 / 4 / 0 / 0 / 2 plus PIN (medicine / manual / meter / caregiver / doctor). The initial failed baselines are preserved.
+
+105 pure checks cover existing safety/privacy/verification plus source priority, off-plan safety, reminder rebuilding, passive leading metrics, experiment walk windows, bundled pills, snooze, large-text persistence and explicit later band connection. Browser gates cover route sweep, clicks, friction, Health Connect, both 412×915 primary states, no-band invitation count, one 72-hour outage notice, legacy migration, all scenarios and the guided journey. Evidence: qa/calm-gates.txt and the two patient screenshots. This remains a synthetic web prototype; real Android Health Connect, real OCR, messaging and payments are not connected.

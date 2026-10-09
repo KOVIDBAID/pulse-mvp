@@ -98,6 +98,8 @@ export type Patient = {
   deleted: boolean;
   habitId: HabitId | null;
   testingPlan: TestingPlan;
+  testingPlanEffectiveAt?: number;
+  testingPlanHistory?: { plan: TestingPlan; from: number; until: number }[];
   bandOwned?: boolean;
   payerId?: string;
   largeText?: boolean;
@@ -132,8 +134,11 @@ export type WellnessDay = Row & {
   lastSync: number | null;
   imported: boolean;
 };
-export function seedWellness(pid: string): WellnessDay[] {
-  if (pid !== P) return [];
+export function seedWellness(
+  pid: string,
+  explicitlyConnected = false,
+): WellnessDay[] {
+  if (pid !== P && !explicitlyConnected) return [];
   return Array.from({ length: 90 }, (_, day) => ({
     id: `HC-W-${pid}-${day}`,
     patientId: pid,
@@ -142,9 +147,11 @@ export function seedWellness(pid: string): WellnessDay[] {
     source: "band",
     measuredAt: minutes(day, "23:00"),
     steps: 3100 + ((day * 137) % 3600),
+    activityStart: minutes(day, "19:30"),
+    activityEnd: minutes(day, "19:50"),
     stepsAfterDinner:
       day >= 10 && day % 7 !== 2
-        ? 900 + ((day * 73) % 850)
+        ? 1500 + ((day * 73) % 850)
         : 120 + ((day * 13) % 220),
     sleepMinutes: [8, 23, 41, 67, 81].includes(day)
       ? 255 + (day % 35)
@@ -871,32 +878,53 @@ export function proof(s: State, pid: string) {
 }
 export function planSlots(s: State, pid: string, from: number, to: number) {
   const p = patient(s, pid),
-    plan = p.testingPlan || starterPlan();
-  const rows: { day: number; time: string; slot: TestSlot; done: boolean }[] =
-    [];
-  for (let d = Math.max(p.start, plan.setOn, from); d <= to; d++)
-    for (const item of plan.schedule) {
-      if (!item.days.includes(((d + 6) % 7) as Weekday)) continue;
-      const time = TEST_TIMES[item.slot];
-      rows.push({
-        day: d,
-        time,
-        slot: item.slot,
-        done: s.readings.some(
-          (r) =>
-            r.patientId === pid &&
-            Math.floor((r.measuredAt ?? minutes(r.day, r.time)) / 1440) === d &&
-            r.context === TEST_CONTEXT[item.slot] &&
-            visible(r, s),
-        ),
-      });
-    }
+    plan = p.testingPlan || starterPlan(),
+    effective = p.testingPlanEffectiveAt ?? minutes(plan.setOn, "00:00");
+  const versions = [
+    ...(p.testingPlanHistory || []),
+    { plan, from: effective, until: Infinity },
+  ];
+  const rows: {
+    day: number;
+    time: string;
+    slot: TestSlot;
+    done: boolean;
+    current: boolean;
+  }[] = [];
+  for (let d = Math.max(p.start, from); d <= to; d++)
+    for (const version of versions)
+      for (const item of version.plan.schedule) {
+        const time = TEST_TIMES[item.slot],
+          at = minutes(d, time);
+        if (
+          at < version.from ||
+          at >= version.until ||
+          !item.days.includes(((d + 6) % 7) as Weekday)
+        )
+          continue;
+        rows.push({
+          day: d,
+          time,
+          slot: item.slot,
+          current: version.until === Infinity,
+          done: s.readings.some(
+            (r) =>
+              r.patientId === pid &&
+              Math.floor((r.measuredAt ?? minutes(r.day, r.time)) / 1440) ===
+                d &&
+              r.context === TEST_CONTEXT[item.slot] &&
+              visible(r, s),
+          ),
+        });
+      }
   return rows.sort((a, b) => minutes(a.day, a.time) - minutes(b.day, b.time));
 }
 export function nextTest(s: State, pid = s.session.patientId) {
   return planSlots(s, pid, s.sim.day, s.sim.day + 7).find(
     (r) =>
-      !r.done && (r.day > s.sim.day || minutes(r.day, r.time) >= now(s) - 120),
+      r.current &&
+      !r.done &&
+      (r.day > s.sim.day || minutes(r.day, r.time) >= now(s) - 120),
   );
 }
 export function testingAdherence(
@@ -953,6 +981,15 @@ export function setTestingPlan(
     )
   )
     throw new Error("Invalid testing schedule");
+  const p = patient(s, pid),
+    previous = p.testingPlan;
+  p.testingPlanHistory ||= [];
+  p.testingPlanHistory.push({
+    plan: structuredClone(previous),
+    from: p.testingPlanEffectiveAt ?? minutes(previous.setOn, "00:00"),
+    until: now(s),
+  });
+  p.testingPlanEffectiveAt = now(s);
   patient(s, pid).testingPlan = {
     ...structuredClone(plan),
     setBy: doctorId,
@@ -961,6 +998,9 @@ export function setTestingPlan(
       ? { ...plan.experiment, approvedBy: doctorId, approvedOn: s.sim.day }
       : undefined,
   };
+  for (const n of s.notifications)
+    if (n.patientId === pid && n.id.startsWith("TEST-PLAN-") && !n.read)
+      n.archived = true;
   rebuildTestReminders(s, pid);
 }
 export function planLabel(p: Patient) {
@@ -970,6 +1010,87 @@ export function planLabel(p: Patient) {
         `${TEST_LABEL[x.slot]} · ${x.days.map((d) => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d]).join("/")}`,
     )
     .join("; ");
+}
+export function medicineSlots(
+  s: State,
+  pid = s.session.patientId,
+  day = s.sim.day,
+) {
+  const rx = activeRx(
+    {
+      ...s,
+      prescriptions: s.prescriptions.filter(
+        (r) => r.remindersConfirmed !== false,
+      ),
+    },
+    pid,
+  );
+  const groups = new Map<string, any[]>();
+  for (const m of rx?.medicines || [])
+    for (const time of m.times || patternTimes(m.pattern)) {
+      if (day > rx!.day + Number(m.duration || 90)) continue;
+      const row = { ...m, doseId: `DOSE-${pid}-${day}-${m.generic}-${time}` };
+      groups.set(time, [...(groups.get(time) || []), row]);
+    }
+  return [...groups]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([time, medicines]) => ({
+      id: `SLOT-${pid}-${day}-${time}`,
+      patientId: pid,
+      day,
+      time,
+      medicines,
+      taken: medicines.every((m) =>
+        s.doses.some((d) => d.id === m.doseId && d.status === "taken"),
+      ),
+      snoozedUntil: s.notifications.find(
+        (n) => n.id === `REMIND-SLOT-${pid}-${day}-${time}`,
+      )?.snoozedUntil,
+    }));
+}
+export function takeSlot(s: State, pid: string, day: number, time: string) {
+  const slot = medicineSlots(s, pid, day).find((x) => x.time === time);
+  if (!slot) return;
+  for (const m of slot.medicines) {
+    const old = s.doses.find((d) => d.id === m.doseId);
+    if (old) {
+      old.status = "taken";
+      old.takenAt = now(s);
+    } else
+      s.doses.push({
+        id: m.doseId,
+        patientId: pid,
+        day,
+        time,
+        generic: m.generic,
+        status: "taken",
+        scheduledTime: time,
+        takenAt: now(s),
+      });
+  }
+  const n = s.notifications.find((n) => n.id === `REMIND-${slot.id}`);
+  if (n) {
+    n.read = true;
+    n.completed = true;
+  }
+}
+export function snoozeSlot(s: State, pid: string, day: number, time: string) {
+  const id = `REMIND-SLOT-${pid}-${day}-${time}`;
+  if (!s.notifications.some((n) => n.id === id))
+    notify(s, pid, pid, "medicines", "Medicine reminder", time, id, "home");
+  const n = s.notifications.find((n) => n.id === id)!;
+  n.snoozedUntil = now(s) + 30;
+  n.read = true;
+}
+export function stockDays(s: State, pid = s.session.patientId) {
+  const rx = activeRx(s, pid);
+  return rx
+    ? Math.min(
+        ...rx.medicines.map(
+          (m: any) => rx.day + Number(m.duration || 90) - s.sim.day,
+        ),
+      )
+    : Infinity;
 }
 export function advance(s: State, day: number, time: string) {
   const target = minutes(day, time);
@@ -1027,68 +1148,45 @@ export function advance(s: State, day: number, time: string) {
         },
         p.id,
       );
-      for (const m of rx?.medicines || [])
-        for (const t of m.times || patternTimes(m.pattern)) {
-          const at = minutes(d, t),
-            id = `DOSE-${p.id}-${d}-${m.generic}-${t}`;
-          if (
-            at <= target &&
-            d >= day - 6 &&
-            !s.doses.some((r) => r.id === id && r.status === "taken")
-          ) {
-            const prev = s.sim;
-            s.sim = { ...prev, day: d, time: t };
-            notify(
-              s,
-              p.id,
-              p.id,
-              "medicines",
-              "Medicine reminder",
-              `${m.generic} · ${t}`,
-              `REMIND-${id}`,
-              "medicines",
-            );
-            s.sim = prev;
-          }
-          if (at + 120 <= target && !s.doses.some((r) => r.id === id)) {
-            const r = {
-              id,
-              patientId: p.id,
-              day: d,
-              time: t,
-              generic: m.generic,
-              status: "missed",
-            };
-            s.doses.push(r);
-            if (d >= day - 6) {
-              const prev = s.sim;
-              s.sim = { ...prev, day: d, time: t };
-              notify(
-                s,
-                p.id,
-                p.id,
-                "medicines",
-                "Medicine update",
-                "No problem · recorded as missed",
-                `N-${id}`,
-                "medicines",
-              );
-              for (const l of s.links.filter((l) => l.patientId === p.id))
-                if (allow(s, l.viewer, p.id, "medicines"))
-                  notify(
-                    s,
-                    p.id,
-                    l.viewer,
-                    "medicines",
-                    `${p.name} medicine update`,
-                    `${m.generic} · missed`,
-                    `${id}-${l.viewer}`,
-                    "medicines",
-                  );
-              s.sim = prev;
-            }
+      for (const slot of medicineSlots(
+        { ...s, sim: { ...s.sim, day: d } },
+        p.id,
+        d,
+      )) {
+        const at = minutes(d, slot.time),
+          id = `REMIND-${slot.id}`;
+        if (at <= target && d >= day - 6 && !slot.taken) {
+          const prev = s.sim;
+          s.sim = { ...prev, day: d, time: slot.time };
+          notify(
+            s,
+            p.id,
+            p.id,
+            "medicines",
+            "Medicine reminder",
+            `${slot.time} · ${slot.medicines.map((m) => m.generic + " " + m.strength).join(" + ")}`,
+            id,
+            "home",
+          );
+          s.sim = prev;
+          const n = s.notifications.find((n) => n.id === id);
+          if (n?.snoozedUntil && n.snoozedUntil <= target) {
+            n.read = false;
+            delete n.snoozedUntil;
           }
         }
+        if (at + 120 <= target)
+          for (const m of slot.medicines)
+            if (!s.doses.some((dose) => dose.id === m.doseId))
+              s.doses.push({
+                id: m.doseId,
+                patientId: p.id,
+                day: d,
+                time: slot.time,
+                generic: m.generic,
+                status: "missed",
+              });
+      }
       for (const r of planSlots(s, p.id, d, d))
         if (d >= day - 6 && !r.done && minutes(d, r.time) <= target) {
           const prev = s.sim;
@@ -1557,14 +1655,30 @@ export function seed(): State {
     s[key].sort((a, b) => minutes(a.day, a.time) - minutes(b.day, b.time));
   return normalizeDeviceState(s);
 }
-export function cohort() {
+export function cohort(s?: State) {
   let n = 7;
   const rand = () => {
     n = (n * 1664525 + 1013904223) >>> 0;
     return n / 4294967296;
   };
   return Array.from({ length: 240 }, (_, i) => {
-    const kept = rand() < 0.5,
+    const adherenceProbability = rand(),
+      fromBand = i % 4 !== 0;
+    const syntheticWalks = Array.from({ length: 7 }, (_, d) => {
+      const done = ((i * 13 + d * 17) % 100) / 100 < adherenceProbability;
+      return fromBand
+        ? { source: "band", stepsAfterDinner: done ? 1800 : 450 }
+        : { source: "typed", walked: done };
+    });
+    const p = s?.patients[i];
+    const passive = p && s ? DS.week(s, p.id, p.start + 20) : null;
+    const habitDays =
+      passive?.walks ??
+      syntheticWalks.filter((r) =>
+        r.source === "band" ? r.stepsAfterDinner! >= 1500 : r.walked,
+      ).length;
+    const habitSource = passive?.source ?? (fromBand ? "band" : "typed");
+    const kept = habitDays >= 4,
       dropout = rand() < 0.12,
       improved = !dropout && rand() < (kept ? 0.62 : 0.22),
       renewed = rand() < (improved ? 0.72 : 0.38);
@@ -1573,6 +1687,8 @@ export function cohort() {
       clinic: (i % 12) + 1,
       month: Math.floor(i / 80) + 1,
       kept,
+      habitDays,
+      habitSource,
       dropout,
       improved,
       renewed,
@@ -1710,6 +1826,15 @@ export function migrateState(value: any): State {
 /** Backfill provenance without changing rules, consent or saved values. */
 export function normalizeDeviceState(s: State): State {
   s.healthConnect ||= {};
+  for (const n of s.notifications)
+    if (
+      n.category === "medicines" &&
+      (n.id.startsWith("REMIND-DOSE-") ||
+        ((n.title.includes("medicine update") ||
+          n.title === "Medicine update") &&
+          /missed/.test(n.body)))
+    )
+      n.archived = true;
   s.supportTasks ||= [];
   s.metrics ||= [];
   s.walks ||= [];

@@ -12,7 +12,24 @@ try {
   fs.writeFileSync(
     moduleFile,
     ts.transpileModule(
-      fs.readFileSync(new URL("../src/lib/engine.ts", import.meta.url), "utf8"),
+      fs
+        .readFileSync(new URL("../src/lib/engine.ts", import.meta.url), "utf8")
+        .replace('"./dataSources"', '"./dataSources.mjs"'),
+      {
+        compilerOptions: {
+          target: ts.ScriptTarget.ES2022,
+          module: ts.ModuleKind.ESNext,
+        },
+      },
+    ).outputText,
+  );
+  fs.writeFileSync(
+    path.join(temp, "dataSources.mjs"),
+    ts.transpileModule(
+      fs.readFileSync(
+        new URL("../src/lib/dataSources.ts", import.meta.url),
+        "utf8",
+      ),
       {
         compilerOptions: {
           target: ts.ScriptTarget.ES2022,

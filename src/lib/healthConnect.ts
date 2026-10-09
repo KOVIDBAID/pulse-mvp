@@ -109,9 +109,9 @@ export function sync(
     ([key]) => key !== "bloodGlucose" && c.permissions[key],
   );
   if (E.patient(s, pid).consents.band && hasBand) {
-    const seedById = new Map(E.seedWellness(pid).map((r) => [r.id, r]));
+    const seedById = new Map(E.seedWellness(pid, true).map((r) => [r.id, r]));
     if (!s.wellness.some((r) => r.patientId === pid))
-      s.wellness.push(...E.seedWellness(pid));
+      s.wellness.push(...E.seedWellness(pid, true));
     for (const row of s.wellness.filter(
       (r) =>
         r.patientId === pid &&
@@ -300,5 +300,8 @@ export function setDevice(
     allowed,
     action: "Connected device permission (Demo)",
   });
-  if (allowed) sync(s, pid);
+  if (allowed) {
+    c.connected = true;
+    sync(s, pid);
+  }
 }

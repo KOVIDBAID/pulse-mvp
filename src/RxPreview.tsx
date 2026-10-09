@@ -1,5 +1,5 @@
 import type { Patient, Row } from "./lib/engine";
-import { date } from "./lib/engine";
+import { date, planLabel, habitLabel } from "./lib/engine";
 export function RxPreview({
   rx,
   p,
@@ -48,6 +48,17 @@ export function RxPreview({
           Date: {date(rx.day)} · Time: {rx.time} · Consultation: {rx.mode}
         </p>
         <p>Provisional diagnosis: {rx.diagnosis}</p>
+        <h3>Testing plan</h3>
+        <p>
+          {planLabel({ ...p, testingPlan: rx.testingPlan || p.testingPlan })}
+        </p>
+        {(rx.testingPlan || p.testingPlan).experiment && (
+          <p>
+            Sugar Detective:{" "}
+            {habitLabel((rx.testingPlan || p.testingPlan).experiment.habitId)} ·
+            six evenings · about 12 extra strips
+          </p>
+        )}
         <table>
           <thead>
             <tr>

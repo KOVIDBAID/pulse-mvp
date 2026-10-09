@@ -1147,12 +1147,188 @@ h3 {
 .m-card.private-card {
   border-left: 4px solid var(--plum-700);
 }
-.source-badge {display:inline-flex;gap:5px;align-items:center;color:#52665e;font-size:12px;margin:6px 0;padding:3px 8px;border:1px solid #dbe4df;border-radius:12px;background:#f6faf8;}
-.source-badge.stale,.freshness.stale {color:#875309;background:#fff4df;}
-.wellness-disclaimer {color:#67716c;font-size:12px;}
-.source-legend {display:flex;gap:8px;flex-wrap:wrap;}
-.hc-sheet {max-height:90vh;overflow-y:auto;}
-.hc-overlay {justify-content:center;align-items:center;padding:16px;}
-.hc-sheet {box-sizing:border-box;}
-.hc-sheet input[type="checkbox"] {width:24px;min-width:24px;flex:0 0 24px;padding:0;}
-.hc-sheet > .m-actions:last-child {position:sticky;bottom:0;background:white;padding:12px 0 2px;}
+.source-badge {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  color: #52665e;
+  font-size: 12px;
+  margin: 6px 0;
+  padding: 3px 8px;
+  border: 1px solid #dbe4df;
+  border-radius: 12px;
+  background: #f6faf8;
+}
+.source-badge.stale,
+.freshness.stale {
+  color: #875309;
+  background: #fff4df;
+}
+.wellness-disclaimer {
+  color: #67716c;
+  font-size: 12px;
+}
+.source-legend {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.hc-sheet {
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.hc-overlay {
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+}
+.hc-sheet {
+  box-sizing: border-box;
+}
+.hc-sheet input[type="checkbox"] {
+  width: 24px;
+  min-width: 24px;
+  flex: 0 0 24px;
+  padding: 0;
+}
+.hc-sheet > .m-actions:last-child {
+  position: sticky;
+  bottom: 0;
+  background: white;
+  padding: 12px 0 2px;
+}
+
+/* Today: next action, automatic summary and progress occupy the first screen. */
+.calm-today {
+  min-height: calc(100svh - 175px);
+}
+.calm-today .m-card {
+  padding: 18px;
+  margin-bottom: 14px;
+}
+.calm-today .m-card h2 {
+  font-size: 21px;
+}
+.calm-today .m-card p {
+  margin: 8px 0;
+}
+.calm-today .m-btn {
+  min-height: 48px;
+}
+.calm-today .embedded-view > h2 {
+  display: none;
+}
+.calm-today .embedded-view .m-card {
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+}
+.calm-today .embedded-view .m-card > h2 {
+  display: none;
+}
+.calm-today .keypad {
+  margin: 8px 0;
+  gap: 6px;
+}
+.calm-today .keypad button {
+  min-height: 44px;
+}
+.calm-today .meter-display {
+  padding: 4px;
+  font-size: 30px;
+}
+.calm-today details {
+  font-size: 16px;
+  margin: 8px 0;
+}
+.calm-today .wellness-disclaimer {
+  font-size: 12px;
+  color: #68746c;
+}
+.today-more > details {
+  padding: 16px;
+}
+
+.calm-today {
+  min-height: calc(100svh - 108px);
+}
+.calm-today .keypad {
+  grid-template-columns: repeat(4, 1fr);
+}
+.calm-today .keypad button {
+  min-height: 40px;
+}
+.inline-hidden {
+  display: none;
+}
+
+.calm-today > .m-card {
+  padding: 12px;
+}
+.calm-today > .m-card h2 {
+  font-size: 18px;
+  line-height: 24px;
+  margin: 0;
+}
+.calm-today > .m-card p {
+  font-size: 16px;
+  line-height: 22px;
+  margin: 8px 0;
+}
+.calm-today > .m-card a {
+  font-size: 16px;
+  line-height: 24px;
+}
+.calm-today > .m-card .wellness-disclaimer {
+  font-size: 11px;
+  line-height: 16px;
+}
+.calm-today [data-next-action="test"] > .m-card {
+  padding: 12px;
+}
+.calm-today .embedded-view {
+  margin: 8px 0 0;
+}
+.calm-today .embedded-view .m-card {
+  margin-bottom: 0;
+}
+.calm-today .meter-display {
+  line-height: 1.2;
+}
+.calm-today .meter-display small {
+  display: inline;
+  margin-left: 8px;
+}
+.calm-today .keypad button {
+  min-height: 44px;
+}
+.calm-today > .m-card {
+  padding: 8px;
+}
+.calm-today [data-next-action="test"] > .m-card {
+  padding: 8px;
+}
+.calm-today [data-next-action="test"] > .m-card > h2 {
+  font-size: 20px;
+  line-height: 26px;
+  margin-bottom: 8px;
+}
+.calm-today .embedded-view {
+  margin: 0;
+}
+.calm-today details {
+  margin: 3px 0;
+  line-height: 20px;
+}
+
+.calm-today .embedded-view .m-hint {
+  margin: 4px 0;
+  line-height: 18px;
+}
+.m-top .today-log {
+  width: auto;
+  font-size: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: #1f6f5c;
+}

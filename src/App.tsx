@@ -212,6 +212,8 @@ function Shell({ children, title }: { children: ReactNode; title: string }) {
       n.audience === s.session.userId &&
       E.visible(n, s) &&
       n.status !== "queued" &&
+      !n.archived &&
+      (!n.snoozedUntil || n.snoozedUntil <= E.now(s)) &&
       !n.read,
   ).length;
   const logout = () => {
@@ -270,6 +272,9 @@ function Shell({ children, title }: { children: ReactNode; title: string }) {
             .filter(
               (item) =>
                 featureVisible(item.path.split("?")[0]) &&
+                (role !== "patient" ||
+                  item.path !== "billing" ||
+                  p?.payerId === p?.id) &&
                 (item.path !== "sugar-detective" ||
                   !!p?.testingPlan.experiment),
             )
@@ -292,7 +297,7 @@ function Shell({ children, title }: { children: ReactNode; title: string }) {
   );
   return (
     <div
-      className={`m-app ${role === "team" || role === "doctor" ? "desktop" : "mobile"} role-${role} ${s.settings.large ? "extra-large" : ""}`}
+      className={`m-app ${role === "team" || role === "doctor" ? "desktop" : "mobile"} role-${role} ${(role === "patient" ? p?.largeText : s.settings.large) ? "extra-large" : ""}`}
     >
       <a
         className="skip-link"
@@ -323,6 +328,13 @@ function Shell({ children, title }: { children: ReactNode; title: string }) {
               {p ? s.sim.day - p.start : 0}
             </small>
           </div>
+          {role === "patient" &&
+            route.split("?")[0] === "/patient/home" &&
+            config.floating && (
+              <button className="today-log" onClick={() => go("/patient/log")}>
+                + Log
+              </button>
+            )}
           <button
             aria-label="Notifications"
             onClick={() => go(`/${role}/notifications`)}
@@ -340,14 +352,15 @@ function Shell({ children, title }: { children: ReactNode; title: string }) {
         <main id="main" tabIndex={-1} className="m-content">
           {children}
         </main>
-        {config.floating && (
-          <button
-            className="log-fab"
-            onClick={() => go(`/${role}/${config.floating!.path}`)}
-          >
-            {config.floating.label}
-          </button>
-        )}
+        {config.floating &&
+          !(role === "patient" && route.split("?")[0] === "/patient/home") && (
+            <button
+              className="log-fab"
+              onClick={() => go(`/${role}/${config.floating!.path}`)}
+            >
+              {config.floating.label}
+            </button>
+          )}
         {role !== "team" && (
           <nav
             className={`m-bottom ${role === "doctor" ? "doctor-bottom" : ""}`}
@@ -740,24 +753,80 @@ function DoseList({
     </Card>
   );
 }
+function NextAction() {
+  const { s, mutate } = useApp(),
+    pid = E.patient(s).id;
+  const slots = E.medicineSlots(s, pid).filter(
+    (x) => !x.taken && (!x.snoozedUntil || x.snoozedUntil <= E.now(s)),
+  );
+  const due = slots.filter((x) => x.time <= s.sim.time).at(-1),
+    slot = due || slots[0],
+    test = E.nextTest(s, pid);
+  const testFirst =
+    test &&
+    (!slot ||
+      E.minutes(test.day, test.time) <= E.minutes(s.sim.day, slot.time)) &&
+    !(
+      test.day === s.sim.day && E.minutes(test.day, test.time) < E.now(s) - 120
+    );
+  if (testFirst)
+    return (
+      <div data-next-action="test">
+        <Card
+          title={`${E.TEST_LABEL[test.slot]} · ${test.day === s.sim.day ? "today" : test.day === s.sim.day + 1 ? "tomorrow" : E.date(test.day)} ${test.time}`}
+        >
+          {test.day === s.sim.day &&
+          E.now(s) >= E.minutes(test.day, test.time) - 30 ? (
+            <EmbeddedViews>
+              <Log inline plannedContext={E.TEST_CONTEXT[test.slot]} />
+            </EmbeddedViews>
+          ) : (
+            <p>Your next prescribed check. Nothing to log on off-plan days.</p>
+          )}
+        </Card>
+      </div>
+    );
+  if (slot)
+    return (
+      <div data-next-action="medicine">
+        <Card
+          title={`${Number(slot.time.slice(0, 2)) % 12 || 12}:${slot.time.slice(3)} ${slot.time < "12:00" ? "AM" : "PM"} · ${slot.medicines.map((m) => m.generic + " " + m.strength).join(" + ")}`}
+        >
+          <p>
+            {slot.medicines
+              .map((m) => m.instruction)
+              .filter((v, i, a) => a.indexOf(v) === i)
+              .join(" · ")}
+          </p>
+          <Btn
+            onClick={() =>
+              mutate((s) => E.takeSlot(s, pid, slot.day, slot.time))
+            }
+          >
+            {slot.medicines.length > 1 ? "Taken all" : "Taken"}
+          </Btn>
+          <Btn
+            secondary
+            onClick={() =>
+              mutate((s) => E.snoozeSlot(s, pid, slot.day, slot.time))
+            }
+          >
+            Snooze 30 min
+          </Btn>
+        </Card>
+      </div>
+    );
+  return (
+    <div data-next-action="done">
+      <Card title="All done for now">
+        <p>Your next action will appear here.</p>
+      </Card>
+    </div>
+  );
+}
 function PatientHome() {
-  const { s, mutate, go, askConfirm, askText } = useApp();
-  const p = E.patient(s);
-  const readings = s.readings
-    .filter((r) => r.patientId === p.id && E.visible(r, s))
-    .sort((a, b) => E.minutes(a.day, a.time) - E.minutes(b.day, b.time));
-  const pr = E.proof(s, p.id);
-  const w3 = s.alerts.find(
-    (a) =>
-      a.patientId === p.id &&
-      a.rule === "W3" &&
-      E.visible(a, s) &&
-      s.sim.day - a.day < 7,
-  );
-  const passiveW3 = s.supportTasks.find(
-    (t) =>
-      t.patientId === p.id && t.id.startsWith("PASSIVE-W3-") && E.visible(t, s),
-  );
+  const { s, mutate, go } = useApp(),
+    p = E.patient(s);
   const active = s.alerts.filter(
     (a) =>
       a.patientId === p.id &&
@@ -765,144 +834,201 @@ function PatientHome() {
       a.status !== "resolved" &&
       ["S1", "S2", "S3", "S5", "S6", "S7"].includes(a.rule),
   );
+  const fasting = s.readings.filter(
+    (r) => r.patientId === p.id && r.context === "fasting" && E.visible(r, s),
+  );
+  const recent = fasting.filter((r) => r.day >= s.sim.day - 6),
+    mean = (r: E.Row[]) =>
+      r.length
+        ? Math.round(r.reduce((n, r) => n + r.value, 0) / r.length)
+        : "—";
+  const missed = s.doses.some(
+    (d) =>
+      d.patientId === p.id &&
+      d.day === s.sim.day - 1 &&
+      d.time >= "18:00" &&
+      d.status === "missed",
+  );
+  const privateOffer =
+    s.moodChecks
+      .filter((r) => r.patientId === p.id && E.visible(r, s))
+      .every((r) => s.sim.day - r.day >= 14) &&
+    s.sim.day - ((p as any).moodDismissedAt ?? -14) >= 14;
   return (
-    <Shell title={"Today"}>
-      <div className="m-hero">
-        <span>Your meter. Your proof.</span>
-        <h1>{`Hello, ${p.name.split(" ")[0]}`}</h1>
-        <p>Care Cycle · Day {Math.max(0, s.sim.day - p.start)} / 90</p>
-        <Badge>Synthetic demo patient</Badge>
-      </div>
+    <Shell title="Today">
       {active.map((a) => (
         <Safety key={a.id} rule={a.rule} />
       ))}
-      {s.links
-        .filter(
-          (l) =>
-            l.patientId === p.id && l.status === "pending" && E.visible(l, s),
-        )
-        .map((l) => (
-          <Card key={l.id} title="Family access request">
-            <p>
-              {l.name || l.viewer} would like to connect. Nothing is shared
-              until you approve.
-            </p>
-            <div className="m-actions">
-              <Btn onClick={() => useApproval(l.id, true)}>
+      <div className="calm-today">
+        <NextAction />
+        {FEATURES.wellnessBand && <YourDay />}
+        <Card title="Progress">
+          <p>
+            Fasting average this week {mean(recent)} (start{" "}
+            {mean(fasting.slice(0, 3))})
+          </p>
+          <a href="#/patient/progress">View Progress</a>
+        </Card>
+      </div>
+      <div className="today-more">
+        {missed && <p>Last night's dose wasn't marked — no problem</p>}
+        {E.activeRx(s, p.id)?.remindersConfirmed === false && (
+          <Card title="New prescription received">
+            <p>Confirm your updated medicines.</p>
+            <Btn
+              onClick={() =>
+                mutate((s) => {
+                  E.activeRx(s, p.id)!.remindersConfirmed = true;
+                })
+              }
+            >
+              Confirm new medicine reminders
+            </Btn>
+          </Card>
+        )}
+        {s.links
+          .filter(
+            (l) =>
+              l.patientId === p.id && l.status === "pending" && E.visible(l, s),
+          )
+          .map((l) => (
+            <Card key={l.id} title="Family access request">
+              <p>
+                {l.name || l.viewer} would like to connect. Nothing is shared
+                until you approve.
+              </p>
+              <Btn onClick={() => approve(l.id, true)}>
                 Approve recommended categories
               </Btn>
-              <Btn secondary onClick={() => useApproval(l.id, false)}>
+              <Btn secondary onClick={() => approve(l.id, false)}>
                 Decline
               </Btn>
-            </div>
+            </Card>
+          ))}
+        {s.supportTasks.some(
+          (t) =>
+            t.patientId === p.id &&
+            t.id.startsWith("PASSIVE-W3-") &&
+            E.visible(t, s),
+        ) && (
+          <Card title="A lighter week">
+            <p>
+              Just one small step: {E.habitLabel(p.habitId)}. The Pulse care
+              team will call to help.
+            </p>
           </Card>
-        ))}
-      {(w3 || passiveW3) && (
-        <Card title="A lighter week">
-          <p>
-            Just one small step: {E.habitLabel(p.habitId)}. The Pulse care team
-            will call to help.
-          </p>
-        </Card>
-      )}
-      {E.activeRx(s, p.id)?.remindersConfirmed === false && (
-        <Card title="New prescription received">
-          <p>
-            The doctor updated your medicines. Confirm before reminder times
-            change.
-          </p>
-          <Btn
-            onClick={() =>
-              mutate((s) => {
-                s.prescriptions.find(
-                  (r) => r.id === E.activeRx(s, p.id)!.id,
-                )!.remindersConfirmed = true;
-              })
-            }
-          >
-            Confirm new medicine reminders
-          </Btn>
-        </Card>
-      )}
-      <DoseList pid={p.id} />
-      {FEATURES.wellnessBand && <YourDay />}
-      <Card title="Your testing plan">
-        <p>{E.planLabel(p)}</p>
-        <p>
-          {p.testingPlan.setBy === "starter"
-            ? "Starter plan — your doctor can change it"
-            : `Set by Dr. Verma on ${E.date(p.testingPlan.setOn)}`}
-        </p>
-        {E.nextTest(s) && (
-          <p>
-            {E.TEST_LABEL[E.nextTest(s)!.slot]} ·{" "}
-            {E.nextTest(s)!.day === s.sim.day ? "today" : "tomorrow"}{" "}
-            {E.nextTest(s)!.time}
-          </p>
         )}
-      </Card>
-      <Card title={pr.ready ? "Your effort, in numbers" : "Your next step"}>
-        {pr.ready ? (
+        {s.sim.day % 7 === 1 && (p as any).weekFeelingDay !== s.sim.day && (
+          <Card title="How was your week?">
+            <div className="m-actions">
+              {["Good", "Okay", "Hard"].map((v, i) => (
+                <Btn
+                  secondary
+                  key={v}
+                  onClick={() => {
+                    mutate((s) => {
+                      (E.patient(s) as any).weekFeelingDay = s.sim.day;
+                      (E.patient(s) as any).weekFeeling = v;
+                    });
+                    if (v === "Hard") go("/patient/mood");
+                  }}
+                >
+                  {["☺", "◉", "☹"][i]} {v}
+                </Btn>
+              ))}
+            </div>
+            <p className="m-hint">Optional · private</p>
+          </Card>
+        )}
+        {privateOffer && (
+          <Card title="Mood check · private" privateCard>
+            <p>
+              Two optional questions, just for you and the care team you allow.
+            </p>
+            <Btn secondary onClick={() => go("/patient/mood")}>
+              Open mood check
+            </Btn>
+            <Btn
+              secondary
+              onClick={() =>
+                mutate((s) => {
+                  (E.patient(s) as any).moodDismissedAt = s.sim.day;
+                })
+              }
+            >
+              Dismiss
+            </Btn>
+          </Card>
+        )}
+        {E.stockDays(s) <= 7 && E.stockDays(s) >= 0 && (
+          <Card title="Running low?">
+            <p>About {E.stockDays(s)} days left from your prescription.</p>
+            <Btn secondary onClick={() => go("/patient/doctor")}>
+              Contact clinic for refill
+            </Btn>
+          </Card>
+        )}
+        {FEATURES.sugarDetective && p.testingPlan.experiment && (
+          <Card title="Prescribed Sugar Detective">
+            <p>{E.habitLabel(p.testingPlan.experiment.habitId)} · 6 evenings</p>
+            <Btn secondary onClick={() => go("/patient/sugar-detective")}>
+              Open Sugar Detective
+            </Btn>
+          </Card>
+        )}
+        <Card title="Your testing plan">
+          <p>{E.planLabel(p)}</p>
           <p>
-            <SourceBadge row={pr.latest!} source="lab" /> HbA1c{" "}
-            {pr.baseline!.value}% → {pr.latest!.value}% · measured change{" "}
-            {pr.delta} points
+            {p.testingPlan.setBy === "starter"
+              ? "Starter plan — your doctor can change it"
+              : `Set by Dr. Verma on ${E.date(p.testingPlan.setOn)}`}
           </p>
-        ) : (
-          <p>Find out what your habit does in six evenings.</p>
-        )}
-        {(pr.ready ||
-          (FEATURES.sugarDetective && p.testingPlan.experiment)) && (
-          <Btn
-            onClick={() => go(pr.ready ? "/patient/proof" : "/patient/jasoos")}
-          >
-            {pr.ready ? "View Proof Card" : "Open Sugar Detective"}{" "}
-            <ChevronRight size={18} />
-          </Btn>
-        )}
-      </Card>
-      <div className="m-grid">
-        <Card title="Latest reading">
-          <strong className="big-number">
-            {DS.value(s, "glucose")?.value ?? "—"}
-          </strong>
-          <p>mg/dL</p>
-          <SourceBadge row={DS.value(s, "glucose")} />
           <Btn secondary onClick={() => go("/patient/log/glucose")}>
             Log glucose
           </Btn>
         </Card>
-        {FEATURES.weeklyQuestionnaire && (
-          <Card title="Sunday check">
-            <p>One small update about your week.</p>
-            <Btn secondary onClick={() => go("/patient/weekly")}>
-              Weekly check
+        {!DS.hasBandWalks(s) && p.habitId === "walk_after_dinner" && (
+          <Card title="Walk after dinner">
+            <Btn
+              secondary
+              disabled={DS.walk(s, p.id, s.sim.day).done}
+              onClick={() =>
+                mutate((s) => {
+                  if (
+                    !s.walks.some(
+                      (r) => r.patientId === p.id && r.day === s.sim.day,
+                    )
+                  )
+                    s.walks.push({
+                      id: E.uid("WALK"),
+                      patientId: p.id,
+                      ...E.stamp(s),
+                      measuredAt: E.now(s),
+                      source: "typed",
+                      value: 1,
+                    });
+                })
+              }
+            >
+              {DS.walk(s, p.id, s.sim.day).done
+                ? "Walk recorded ✓"
+                : "I walked"}
             </Btn>
+            <SourceBadge source="typed" />
           </Card>
         )}
-      </div>
-      <div className="m-actions">
-        <Btn secondary onClick={() => go("/patient/doctor")}>
-          <MessageCircle size={18} />
-          Doctor
-        </Btn>
-        {FEATURES.mythBuster && (
-          <Btn secondary onClick={() => go("/patient/myth")}>
-            <ShieldCheck size={18} />
-            True or false?
-          </Btn>
-        )}
-        <Btn secondary onClick={() => go("/patient/privacy")}>
-          <Users size={18} />
-          Consent & family
-        </Btn>
+        <details>
+          <summary>Medicines & reminder times</summary>
+          <DoseList pid={p.id} />
+          <ReminderTimes />
+        </details>
       </div>
     </Shell>
   );
-  function useApproval(id: string, approved: boolean) {
+  function approve(id: string, on: boolean) {
     mutate((s) => {
       const l = s.links.find((l) => l.id === id)!;
-      l.status = approved ? "approved" : "declined";
+      l.status = on ? "approved" : "declined";
       l.permissions = Object.fromEntries(
         E.categories.map((c) => [
           c,
@@ -919,21 +1045,70 @@ function PatientHome() {
     });
   }
 }
-function Log() {
+function ReminderTimes() {
+  const { s, mutate } = useApp();
+  const [edit, setEdit] = useState(false);
+  const rx = E.activeRx(s, E.patient(s).id);
+  if (!rx) return null;
+  return (
+    <>
+      <Btn secondary onClick={() => setEdit(!edit)}>
+        Change times
+      </Btn>
+      {edit &&
+        rx.medicines.map((m: any, i: number) => (
+          <div key={i}>
+            {(m.times || E.patternTimes(m.pattern)).map(
+              (time: string, j: number) => (
+                <Field
+                  key={j}
+                  type="time"
+                  label={`${m.generic} reminder ${j + 1}`}
+                  value={time}
+                  onChange={(v: string) =>
+                    mutate((s) => {
+                      const r = E.activeRx(s, E.patient(s).id)!;
+                      r.medicines[i].times ||= E.patternTimes(m.pattern);
+                      r.medicines[i].times[j] = v;
+                    })
+                  }
+                />
+              ),
+            )}
+          </div>
+        ))}
+    </>
+  );
+}
+function Log({
+  inline = false,
+  plannedContext,
+}: { inline?: boolean; plannedContext?: string } = {}) {
   const { s, mutate, go, toast, route, askConfirm, askText } = useApp();
   const [kind, setKind] = useState(
-    route.includes("glucose") ? "glucose" : "menu",
+    inline || route.includes("glucose") ? "glucose" : "menu",
   );
   const [value, setValue] = useState("");
   const [unit, setUnit] = useState("mg/dL");
   const [readingSource, setReadingSource] = useState<E.DataSource>("typed");
-  const [context, setContext] = useState("fasting");
+  const [context, setContext] = useState(
+    plannedContext ||
+      (E.nextTest(s)?.day === s.sim.day
+        ? E.TEST_CONTEXT[E.nextTest(s)!.slot]
+        : s.sim.time < "10:00"
+          ? "fasting"
+          : s.sim.time >= "22:00"
+            ? "bedtime"
+            : "any"),
+  );
   const [measured, setMeasured] = useState(s.sim.time);
   const [measuredDay, setMeasuredDay] = useState(s.sim.day);
   const [symptoms, setSymptoms] = useState("");
   const [own, setOwn] = useState(true);
   const [result, setResult] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(true);
+  const [photo, setPhoto] = useState(false);
+  const [bp, setBp] = useState("");
   const numeric =
     value === "LO"
       ? 30
@@ -973,6 +1148,7 @@ function Log() {
         // @end-allow-devanagari
       });
       setResult(r.rule || "normal");
+      if (inline && !r.rule) toast("Reading saved");
     });
   };
   if (result)
@@ -1020,68 +1196,84 @@ function Log() {
     <Shell title={"Log an update"}>
       {kind === "menu" ? (
         <>
-          <div className="m-grid">
-            {[
-              ["glucose", "Sugar"],
-              ["medicine", "Medicine taken"],
-              ["water", "Water"],
-              ["weight", "Weight & BP"],
-              ["symptom", "Symptoms"],
-              ["meal", "Meal photo"],
-              ["note", "Private note"],
-              ["report", "Lab report"],
-            ]
-              .filter(
-                ([k]) =>
-                  k !== "weight" &&
-                  (k !== "meal" || FEATURES.mealPhotos) &&
-                  (k !== "water" || FEATURES.manualWater) &&
-                  (k !== "note" || FEATURES.privateNotes),
-              )
-              .map(([k, t]) => (
-                <Btn
-                  secondary
-                  key={k}
-                  onClick={() => {
-                    if (k === "note") go("/patient/notes");
-                    else if (k === "report") go("/patient/records/upload");
-                    else if (k === "medicine") go("/patient/medicines");
-                    else setKind(k);
-                  }}
-                >
-                  {t}
-                </Btn>
-              ))}
-          </div>
-          {FEATURES.manualWeightBp && (
-            <details>
-              <summary>More</summary>
+          <Btn onClick={() => setKind("glucose")}>Sugar reading</Btn>
+          <details>
+            <summary>More</summary>
+            {FEATURES.manualWeightBp && (
               <Btn secondary onClick={() => setKind("weight")}>
                 Weight & BP
               </Btn>
-            </details>
-          )}
+            )}
+            <Btn secondary onClick={() => go("/patient/records/upload")}>
+              Lab report
+            </Btn>
+            <Btn secondary onClick={() => setKind("symptom")}>
+              Symptoms
+            </Btn>
+          </details>
         </>
       ) : kind === "glucose" ? (
         <Card title="Sugar reading · seen by you and the doctors you allow">
+          <Btn secondary onClick={() => setPhoto(!photo)}>
+            Take a photo of your meter
+          </Btn>
+          {photo && (
+            <div>
+              <input
+                aria-label="Meter photo"
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={() =>
+                  toast(
+                    "Demo photo capture — choose a synthetic sample below, or use the keypad. No real OCR is performed.",
+                  )
+                }
+              />
+              <Select
+                label="Demo meter photo (simulated OCR)"
+                value=""
+                onChange={(v: string) => {
+                  if (v === "unclear") {
+                    toast("Unclear — enter value manually");
+                    return;
+                  }
+                  setValue(
+                    v === "meter_LO"
+                      ? "LO"
+                      : v === "meter_5_2_mmol"
+                        ? "5.2"
+                        : "142",
+                  );
+                  setUnit(v === "meter_5_2_mmol" ? "mmol/L" : "mg/dL");
+                  setReadingSource("meter-photo");
+                  setConfirmed(false);
+                }}
+                options={[
+                  ["", "Choose sample"],
+                  ["meter_142", "142 mg/dL"],
+                  ["meter_LO", "LO"],
+                  ["meter_5_2_mmol", "5.2 mmol/L"],
+                  ["unclear", "Unclear"],
+                ]}
+              />
+            </div>
+          )}
+          <p className="m-hint">
+            Or use the keypad ·{" "}
+            {context === "fasting"
+              ? "Fasting"
+              : context === "after"
+                ? "2 hours after meal"
+                : context === "before"
+                  ? "Before meal"
+                  : context === "bedtime"
+                    ? "Bedtime"
+                    : "Other time"}
+          </p>
           <div className="meter-display">
             {value || "—"} <small>{unit}</small>
           </div>
-          <Field
-            label="Meter value (or LO / HI)"
-            value={value}
-            onChange={(v: string) => {
-              setValue(v);
-              setReadingSource("typed");
-              setConfirmed(true);
-            }}
-          />
-          <Select
-            label="Unit"
-            value={unit}
-            onChange={setUnit}
-            options={["mg/dL", "mmol/L"]}
-          />
           <div className="keypad">
             {[
               "1",
@@ -1098,88 +1290,108 @@ function Log() {
               "HI",
               ".",
               "⌫",
-            ].map((k) => (
-              <button
-                key={k}
-                onClick={() => {
-                  setReadingSource("typed");
-                  setValue((v) =>
-                    k === "⌫"
-                      ? v.slice(0, -1)
-                      : k === "LO" || k === "HI"
-                        ? k
-                        : v.replace(/LO|HI/, "") + k,
-                  );
-                  setConfirmed(true);
-                }}
-              >
-                {k}
-              </button>
-            ))}
+            ]
+              .filter((k) => !inline || !["LO", "HI"].includes(k))
+              .map((k) => (
+                <button
+                  key={k}
+                  onClick={() => {
+                    setReadingSource("typed");
+                    setValue((v) =>
+                      k === "⌫"
+                        ? v.slice(0, -1)
+                        : k === "LO" || k === "HI"
+                          ? k
+                          : v.replace(/LO|HI/, "") + k,
+                    );
+                    setConfirmed(true);
+                  }}
+                >
+                  {k}
+                </button>
+              ))}
           </div>
-          <Select
-            label="Context"
-            value={context}
-            onChange={setContext}
-            options={[
-              ["fasting", "Fasting"],
-              ["before", "Before meal"],
-              ["after", "2 hours after meal"],
-              ["bedtime", "Bedtime"],
-              ["any", "Other time"],
-            ]}
-          />
-          <Field
-            label="Measured on simulated day"
-            type="number"
-            min={0}
-            max={s.sim.day}
-            value={measuredDay}
-            onChange={(v: string) => setMeasuredDay(Number(v))}
-          />
-          <Field
-            label="Measured time"
-            type="time"
-            value={measured}
-            onChange={setMeasured}
-          />
-          <Field
-            label="Symptoms (shaking, sweating, vomiting, breathless…)"
-            value={symptoms}
-            onChange={setSymptoms}
-          />
-          <Toggle
-            label="Is this your reading?"
-            on={own}
-            onChange={() => setOwn(!own)}
-          />
-          <Select
-            label="Demo meter photo (simulated OCR)"
-            value=""
-            onChange={(v: string) => {
-              if (v === "unclear") {
-                toast("Unclear — enter value manually");
-                return;
-              }
-              setValue(
-                v === "meter_LO"
-                  ? "LO"
-                  : v === "meter_5_2_mmol"
-                    ? "5.2"
-                    : "142",
-              );
-              setUnit(v === "meter_5_2_mmol" ? "mmol/L" : "mg/dL");
-              setReadingSource("meter-photo");
-              setConfirmed(false);
-            }}
-            options={[
-              ["", "Choose sample"],
-              ["meter_142", "142 mg/dL"],
-              ["meter_LO", "LO"],
-              ["meter_5_2_mmol", "5.2 mmol/L"],
-              ["unclear", "Unclear"],
-            ]}
-          />
+          <details>
+            <summary>Change context or details</summary>
+            {inline && (
+              <div className="m-actions">
+                {["LO", "HI"].map((k) => (
+                  <Btn
+                    secondary
+                    key={k}
+                    onClick={() => {
+                      setReadingSource("typed");
+                      setValue(k);
+                      setConfirmed(true);
+                    }}
+                  >
+                    {k}
+                  </Btn>
+                ))}
+              </div>
+            )}
+            <Field
+              label="Meter value (or LO / HI)"
+              value={value}
+              onChange={(v: string) => {
+                setValue(v);
+                setReadingSource("typed");
+                setConfirmed(true);
+              }}
+            />
+            <Select
+              label="Unit"
+              value={unit}
+              onChange={setUnit}
+              options={["mg/dL", "mmol/L"]}
+            />
+            <Select
+              label="Context"
+              value={context}
+              onChange={setContext}
+              options={[
+                ["fasting", "Fasting"],
+                ["before", "Before meal"],
+                ["after", "2 hours after meal"],
+                ["bedtime", "Bedtime"],
+                ["any", "Other time"],
+              ]}
+            />
+            <Field
+              label="Measured on simulated day"
+              type="number"
+              min={0}
+              max={s.sim.day}
+              value={measuredDay}
+              onChange={(v: string) => setMeasuredDay(Number(v))}
+            />
+            <Field
+              label="Measured time"
+              type="time"
+              value={measured}
+              onChange={setMeasured}
+            />
+            <Field
+              label="Symptoms (shaking, sweating, vomiting, breathless…)"
+              value={symptoms}
+              onChange={setSymptoms}
+            />
+          </details>
+          {(E.patient(s).testingPlan.away ||
+            (valid &&
+              value &&
+              s.readings
+                .filter(
+                  (r) => r.patientId === E.patient(s).id && E.visible(r, s),
+                )
+                .slice(-3)
+                .some((r) => Math.abs(numeric - r.value) >= 80))) && (
+            <Toggle
+              label="Is this your reading?"
+              on={own}
+              onChange={() => setOwn(!own)}
+            />
+          )}
           {!confirmed && (
             <Toggle
               label="I confirm the extracted reading"
@@ -1187,7 +1399,7 @@ function Log() {
               onChange={() => setConfirmed(true)}
             />
           )}
-          <p className="m-hint">
+          <p className={`m-hint ${inline ? "inline-hidden" : ""}`}>
             No future measurement time. Older than 30 minutes follows the
             stale-reading path.
           </p>
@@ -1247,40 +1459,80 @@ function Log() {
           )}
         </Card>
       ) : (
-        <Card title="Weight or BP">
-          <Field
-            label="Weight kg (25–250)"
-            value={value}
-            onChange={setValue}
-            type="number"
-          />
-          <Btn
-            disabled={Number(value) < 25 || Number(value) > 250}
-            onClick={() => {
-              mutate((s) =>
-                s.notes.push({
-                  id: E.uid("WEIGHT"),
-                  patientId: E.patient(s).id,
-                  ...E.stamp(s),
-                  source: "typed",
-                  measuredAt: E.now(s),
-                  value: Number(value),
-                  metric: "weight",
-                  text: `Weight ${value} kg`,
-                  owner: E.patient(s).id,
-                  shared: false,
-                }),
-              );
-              toast("Weight saved");
-              setKind("menu");
-            }}
-          >
-            Save weight
-          </Btn>
+        <Card title="Weight & BP">
+          {(["weight", "bp"] as const).map((metric) => {
+            const row = DS.value(s, metric);
+            return (
+              row && (
+                <p key={metric}>
+                  {metric === "weight" ? "Weight" : "BP"}: {row.value}{" "}
+                  <SourceBadge row={row} />
+                </p>
+              )
+            );
+          })}
+          {s.healthConnect[E.patient(s).id]?.connected &&
+          s.healthConnect[E.patient(s).id]?.devices?.scale ? (
+            <p>Weight is supplied by your connected scale · Demo.</p>
+          ) : (
+            <>
+              <Field
+                label="Weight kg (25–250)"
+                value={value}
+                onChange={setValue}
+                type="number"
+              />
+              <Btn
+                disabled={Number(value) < 25 || Number(value) > 250}
+                onClick={() => saveMetric("weight", Number(value))}
+              >
+                Save weight
+              </Btn>
+            </>
+          )}
+          {s.healthConnect[E.patient(s).id]?.connected &&
+          s.healthConnect[E.patient(s).id]?.devices?.bpCuff ? (
+            <p>BP is supplied by your connected cuff · Demo.</p>
+          ) : (
+            <>
+              <Field
+                label="BP (systolic/diastolic)"
+                value={bp}
+                onChange={setBp}
+              />
+              <Btn
+                disabled={
+                  !/^\d{2,3}\/\d{2,3}$/.test(bp) ||
+                  Number(bp.split("/")[0]) < 60 ||
+                  Number(bp.split("/")[0]) > 250 ||
+                  Number(bp.split("/")[1]) < 30 ||
+                  Number(bp.split("/")[1]) > 150
+                }
+                onClick={() => saveMetric("bp", bp)}
+              >
+                Save BP
+              </Btn>
+            </>
+          )}
+          <p>For wellness trends — not for diagnosis.</p>
         </Card>
       )}
     </Shell>
   );
+  function saveMetric(metric: string, value: number | string) {
+    mutate((s) =>
+      s.metrics.push({
+        id: E.uid("METRIC"),
+        patientId: E.patient(s).id,
+        ...E.stamp(s),
+        source: "typed",
+        measuredAt: E.now(s),
+        metric,
+        value,
+      }),
+    );
+    toast(`${metric === "weight" ? "Weight" : "BP"} saved`);
+  }
 }
 function Water() {
   const { s, mutate, askConfirm, askText } = useApp();
@@ -1517,10 +1769,10 @@ function Sprint() {
                     options={["A", "B"]}
                   />
                   {sp.habitId === "walk_after_dinner" &&
-                    (DS.hasBand(s, pid) ? (
+                    (DS.hasBandWalks(s, pid) ? (
                       <p>
                         Walk verified automatically from band:{" "}
-                        {DS.walk(s, pid, s.sim.day).done
+                        {DS.walk(s, pid, s.sim.day, sp.dinnerAt, E.now(s)).done
                           ? "✓"
                           : "Waiting for 1,500 steps between dinner and the check"}
                       </p>
@@ -1614,8 +1866,20 @@ function Sprint() {
                           before: Number(before),
                           after: Number(after),
                           fasting: fasting ? Number(fasting) : null,
-                          walkVerified: DS.walk(s, pid, s.sim.day).done,
-                          walkSource: DS.walk(s, pid, s.sim.day).source,
+                          walkVerified: DS.walk(
+                            s,
+                            pid,
+                            s.sim.day,
+                            sp.dinnerAt,
+                            E.now(s),
+                          ).done,
+                          walkSource: DS.walk(
+                            s,
+                            pid,
+                            s.sim.day,
+                            sp.dinnerAt,
+                            E.now(s),
+                          ).source,
                         });
                         E.recordReading(s, {
                           value: Number(before),
@@ -1862,103 +2126,117 @@ function Mood() {
   );
 }
 function Progress() {
-  const { s, go, askConfirm, askText } = useApp();
-  const pid = E.patient(s).id,
+  const { s, go } = useApp(),
+    p = E.patient(s),
+    pid = p.id,
     pr = E.proof(s, pid);
   const readings = s.readings.filter(
     (r) => r.patientId === pid && r.context === "fasting" && E.visible(r, s),
   );
+  const weeks = [...new Set(readings.map((r) => Math.floor(r.day / 7)))]
+    .sort((a, b) => a - b)
+    .map((w) => {
+      const rs = readings.filter((r) => Math.floor(r.day / 7) === w);
+      return {
+        week: w,
+        value: Math.round(rs.reduce((n, r) => n + r.value, 0) / rs.length),
+        n: rs.length,
+      };
+    });
+  const walk = DS.week(s, pid),
+    sleep = HC.wellness(s, pid).filter(
+      (r) => r.day >= s.sim.day - 6 && r.sleepMinutes != null,
+    );
+  const sleepAvg = sleep.length
+    ? Math.round(sleep.reduce((n, r) => n + r.sleepMinutes!, 0) / sleep.length)
+    : null;
+  const [details, setDetails] = useState(false);
   return (
     <Shell title="Your progress">
-      <Card title="Measured HbA1c change">
-        {pr.baseline ? (
+      <Card title="Your sugar">
+        {weeks.length ? (
           <>
-            <strong className="big-number">
-              {pr.baseline.value}% →{" "}
-              {pr.ready ? pr.latest!.value + "%" : "pending"}
-            </strong>
-            <SourceBadge row={pr.latest || pr.baseline} source="lab" />
-            <p>
-              Verified labs only · target set by doctor {E.patient(s).target}%
-            </p>
-            {pr.ready && <p>Measured change {pr.delta} points</p>}
-          </>
-        ) : (
-          <Empty>Baseline test not yet available.</Empty>
-        )}
-      </Card>
-      <Card title="Fasting readings">
-        {readings.length ? (
-          <>
-            <svg viewBox="0 0 360 180" role="img" aria-label="Fasting readings">
+            <svg
+              viewBox="0 0 360 150"
+              role="img"
+              aria-label="Weekly fasting average"
+            >
               <polyline
                 fill="none"
                 stroke="#1F6F5C"
                 strokeWidth="3"
-                points={readings
+                points={weeks
                   .map(
-                    (r, i) =>
-                      `${15 + (i * 330) / Math.max(1, readings.length - 1)},${165 - Math.min(150, r.value / 2)}`,
+                    (w, i) =>
+                      `${15 + (i * 330) / Math.max(1, weeks.length - 1)},${140 - Math.min(125, w.value / 2)}`,
                   )
                   .join(" ")}
               />
-              {readings.map((r, i) => (
+              {weeks.map((w, i) => (
                 <circle
-                  key={r.id}
-                  cx={15 + (i * 330) / Math.max(1, readings.length - 1)}
-                  cy={165 - Math.min(150, r.value / 2)}
+                  key={w.week}
+                  cx={15 + (i * 330) / Math.max(1, weeks.length - 1)}
+                  cy={140 - Math.min(125, w.value / 2)}
                   r="4"
                   fill="#1F6F5C"
                 >
                   <title>
-                    {E.date(r.day)}: {r.value} mg/dL
+                    Week {w.week + 1}: {w.value} mg/dL · n={w.n}
                   </title>
                 </circle>
               ))}
             </svg>
-            <p>n={readings.length} · mg/dL</p>
-            <div className="source-legend">
-              {[...new Set(readings.map((r) => r.source as E.DataSource))].map(
-                (source) => (
-                  <SourceBadge key={source} source={source} />
-                ),
-              )}
-            </div>
+            <p>Fasting weekly average · n={readings.length} · mg/dL</p>
+            {[...new Set(readings.map((r) => r.source as E.DataSource))].map(
+              (source) => (
+                <SourceBadge key={source} source={source} />
+              ),
+            )}
           </>
         ) : (
           <Empty>Shows up after your first reading</Empty>
         )}
       </Card>
-      <Card title="Experiments">
-        {s.sprints
-          .filter((r) => r.patientId === pid && E.visible(r, s))
-          .map((r) => {
-            const result = E.sprintResult(
-              r.evenings.filter((e: any) => e.day < s.sim.day),
-            );
-            return (
-              <div className="m-row" key={r.id}>
-                <FlaskConical />
-                <div>
-                  {E.habitLabel(r.habitId)}
-                  <small>
-                    {result.status === "result"
-                      ? `${result.effect} mg/dL · early signal`
-                      : result.status}
-                  </small>
-                </div>
-                <Btn secondary onClick={() => go("/patient/jasoos")}>
-                  Open
-                </Btn>
-              </div>
-            );
-          })}
+      <Card title="Your habits">
+        <p>
+          Walks after dinner: {walk.walks}/7 days{" "}
+          <SourceBadge source={walk.source} />
+        </p>
+        {sleepAvg != null && (
+          <p>
+            Sleep average: {Math.floor(sleepAvg / 60)} h {sleepAvg % 60} m ·
+            From band · wellness only · Demo
+          </p>
+        )}
+        {DS.hasBand(s, pid) && (
+          <>
+            <p className="wellness-disclaimer">
+              For wellness trends — not for diagnosis.
+            </p>
+            <Btn secondary onClick={() => setDetails(!details)}>
+              {details ? "Hide band details" : "See band details"}
+            </Btn>
+            {details && (
+              <EmbeddedViews>
+                <Band />
+              </EmbeddedViews>
+            )}
+          </>
+        )}
       </Card>
-      <Water />
-      <EmbeddedViews>
-        <Billing proofOnly />
-        {FEATURES.wellnessBand && <YourDay />}
-      </EmbeddedViews>
+      <Card title="Your 90 days">
+        <p>
+          HbA1c start {pr.baseline?.value ?? "—"}% →{" "}
+          {pr.ready ? `${pr.latest!.value}%` : "next lab pending"}
+        </p>
+        <SourceBadge row={pr.latest || pr.baseline || undefined} source="lab" />
+        <p>Next lab date: {E.date(p.start + 90)}</p>
+        {pr.ready && (
+          <Btn secondary onClick={() => go("/patient/proof")}>
+            View Proof Card
+          </Btn>
+        )}
+      </Card>
     </Shell>
   );
 }
@@ -2894,6 +3172,8 @@ function Notifications() {
       n.audience === user &&
       E.visible(n, s) &&
       n.status !== "queued" &&
+      !n.archived &&
+      (!n.snoozedUntil || n.snoozedUntil <= E.now(s)) &&
       (s.session.role !== "caregiver" ||
         E.allow(s, user, n.patientId, n.category)),
   );
@@ -2932,30 +3212,51 @@ function Notifications() {
         Mark all read
       </Btn>
       {filtered.length ? (
-        filtered.slice().map((n) => (
-          <button
-            key={n.id}
-            className="notification-card"
-            onClick={() => {
-              mutate((s) => {
-                s.notifications.find((r) => r.id === n.id)!.read = true;
-                s.session.patientId = n.patientId;
-              });
-              go(`/${s.session.role}/${n.link || "home"}`);
-            }}
-          >
-            <Bell size={20} />
-            <div>
-              <b>
-                {n.title} {!n.read && "●"}
-              </b>
-              <p>{n.body}</p>
-              <small>
-                {E.date(n.day)} {n.time}
-                {n.delayed ? " · delayed by offline connection" : ""}
-              </small>
-            </div>
-          </button>
+        filtered.map((n) => (
+          <div className="notification-card" key={n.id}>
+            <button
+              className="drawer-link"
+              onClick={() => {
+                mutate((s) => {
+                  s.notifications.find((r) => r.id === n.id)!.read = true;
+                  s.session.patientId = n.patientId;
+                });
+                go(`/${s.session.role}/${n.link || "home"}`);
+              }}
+            >
+              <Bell size={20} />
+              <div>
+                <b>
+                  {n.title} {!n.read && "●"}
+                </b>
+                <p>{n.body}</p>
+                <small>
+                  {E.date(n.day)} {n.time}
+                </small>
+              </div>
+            </button>
+            {s.session.role === "patient" &&
+              n.id.startsWith("REMIND-SLOT-") &&
+              !n.completed && (
+                <div className="m-actions">
+                  <Btn
+                    onClick={() =>
+                      mutate((s) => E.takeSlot(s, n.patientId, n.day, n.time))
+                    }
+                  >
+                    Taken
+                  </Btn>
+                  <Btn
+                    secondary
+                    onClick={() =>
+                      mutate((s) => E.snoozeSlot(s, n.patientId, n.day, n.time))
+                    }
+                  >
+                    Snooze 30 min
+                  </Btn>
+                </div>
+              )}
+          </div>
         ))
       ) : (
         <Empty>No permitted notifications here.</Empty>
@@ -3172,6 +3473,9 @@ function Caregiver({ alertsOnly = false }: { alertsOnly?: boolean } = {}) {
           {E.allow(s, user, pid, "wellness") && DS.summary(s, pid) && (
             <Card title="Weekly wellness">
               <p>From band · wellness only · Demo</p>
+              <p className="wellness-disclaimer">
+                For wellness trends — not for diagnosis.
+              </p>
               <p>{DS.summary(s, pid)}</p>
             </Card>
           )}
@@ -4080,6 +4384,9 @@ function DoctorPatient() {
               {E.allow(s, user, pid, "wellness") && DS.summary(s, pid) && (
                 <Card title="Wellness brief">
                   <p>From band · wellness only · Demo</p>
+                  <p className="wellness-disclaimer">
+                    For wellness trends — not for diagnosis.
+                  </p>
                   <p>{DS.summary(s, pid)}</p>
                   <p>
                     Band adherence: {DS.week(s, pid).bandDays}/7 days · Testing
@@ -5205,7 +5512,7 @@ function Impact() {
   const [month, setMonth] = useState("all");
   const [members, setMembers] = useState(1000);
   const [claims, setClaims] = useState(12000);
-  const rows = E.cohort().filter(
+  const rows = E.cohort(s).filter(
     (r) =>
       (s.session.role === "doctor"
         ? r.clinic === 1
@@ -5288,6 +5595,11 @@ function Impact() {
         </div>
         <p>
           Denominator: {n} enrolled · dropout counted as not improved (ITT).
+          Leading metric: ≥4 of 7 after-dinner walks ·{" "}
+          {rows.filter((r) => r.habitSource === "band").length} Band /{" "}
+          {rows.filter((r) => r.habitSource === "typed").length} You. Demo
+          cohort days are synthetic; current patients use their permitted band
+          records or walk taps.
         </p>
       </Card>
       {tab === "Metrics chain" ? (
@@ -5457,8 +5769,7 @@ function Band({ settings = false }: { settings?: boolean } = {}) {
     ([key]) => key !== "bloodGlucose" && permitted[key],
   );
   const fresh = HC.freshness(s, c?.lastSync);
-  if (!FEATURES.wellnessBand || (!settings && E.patient(s).bandOwned === false))
-    return null;
+  if (!FEATURES.wellnessBand || (!settings && !DS.hasBand(s))) return null;
   const open = () => {
     setPermissions(HC.connect());
     setSheet(true);
@@ -5485,20 +5796,35 @@ function Band({ settings = false }: { settings?: boolean } = {}) {
           <div className="m-grid">
             {(
               [
-                ["steps", "Steps", latest.steps, "steps"],
+                [
+                  "steps",
+                  "Steps",
+                  DS.value(s, "steps")?.value ?? null,
+                  "steps",
+                ],
                 [
                   "steps",
                   "After-dinner steps (19:00–22:30)",
-                  latest.stepsAfterDinner,
+                  DS.value(s, "activity")?.value ?? null,
                   "steps",
                 ],
-                ["sleep", "Sleep", latest.sleepMinutes, "min"],
-                ["heartRate", "Resting heart rate", latest.restingHr, "bpm"],
-                ["oxygen", "Oxygen saturation", latest.spo2Min, "%"],
+                ["sleep", "Sleep", DS.value(s, "sleep")?.value ?? null, "min"],
+                [
+                  "heartRate",
+                  "Resting heart rate",
+                  DS.value(s, "heartRate")?.value ?? null,
+                  "bpm",
+                ],
+                [
+                  "oxygen",
+                  "Oxygen saturation",
+                  DS.value(s, "spo2")?.value ?? null,
+                  "%",
+                ],
                 [
                   "hydration",
                   "Hydration logged elsewhere",
-                  latest.hydrationMl,
+                  DS.value(s, "hydration")?.value ?? null,
                   "ml",
                 ],
               ] as const
@@ -5679,6 +6005,13 @@ function ConnectedDevices() {
               });
               conn.permissions.bloodGlucose = !conn.permissions.bloodGlucose;
               conn.connected = true;
+              s.consentLog.push({
+                id: E.uid("METER-PERMISSION"),
+                patientId: p.id,
+                ...E.stamp(s),
+                action: "Glucometer permission (Demo)",
+                allowed: conn.permissions.bloodGlucose,
+              });
               HC.sync(s, p.id);
             })
           }
@@ -5716,6 +6049,9 @@ function YourDay() {
       <p>
         {text} · Band, {HC.freshness(s, c?.lastSync).text} · Demo
       </p>
+      <p className="wellness-disclaimer">
+        For wellness trends — not for diagnosis.
+      </p>
       {stale && (
         <p className="freshness stale">
           Band not synced since yesterday — open your band app{" "}
@@ -5740,7 +6076,8 @@ function SourceBadge({ row, source }: { row?: E.Row; source?: E.DataSource }) {
           : src === "health-connect"
             ? "Device"
             : "Meter";
-  const device = src === "band" || src === "meter-sync";
+  const device =
+    src === "band" || src === "meter-sync" || src === "health-connect";
   const at = row?.lastSync ?? (row ? E.minutes(row.day, row.time) : null);
   const fresh = HC.freshness(s, at);
   const label = device
@@ -5859,10 +6196,12 @@ function Utility({ kind }: { kind?: string } = {}) {
           )}
           <Toggle
             label="Extra large text"
-            on={s.settings.large}
+            on={role === "patient" ? !!p.largeText : s.settings.large}
             onChange={() =>
               mutate((s) => {
-                s.settings.large = !s.settings.large;
+                if (role === "patient")
+                  E.patient(s).largeText = !E.patient(s).largeText;
+                else s.settings.large = !s.settings.large;
               })
             }
           />
@@ -6017,6 +6356,7 @@ function Auth({ role }: { role: E.Role }) {
         deleted: false,
         habitId: null,
         testingPlan: { ...E.starterPlan(), setOn: s.sim.day },
+        testingPlanEffectiveAt: E.now(s),
         bandOwned,
         payerId: id,
         consents: { ...consents, sprint: !!consents.sprint && meter },
@@ -6999,8 +7339,8 @@ export default function App() {
   useEffect(() => {
     if (FEATURES.wellnessBand || FEATURES.meterAutoSync)
       mutate((s) => {
-        HC.sync(s, hcPatient, FEATURES.meterAutoSync);
         HC.staleBandNotice(s, hcPatient);
+        HC.sync(s, hcPatient, FEATURES.meterAutoSync);
       });
   }, [
     s.sim.day,

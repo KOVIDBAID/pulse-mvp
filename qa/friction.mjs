@@ -38,6 +38,14 @@ async function journey(name, role, start, budget, action) {
       s.sim.time = "21:30";
       localStorage.setItem("pulse-demo-v1", JSON.stringify(s));
     }, role);
+    if (name.startsWith("prescribed fasting"))
+      await page.evaluate(() => {
+        const s = JSON.parse(localStorage.getItem("pulse-demo-v1"));
+        s.sim.time = "07:30";
+        s.sim.day = 90;
+        s.readings = s.readings.filter((r) => r.day !== 90);
+        localStorage.setItem("pulse-demo-v1", JSON.stringify(s));
+      });
     if (name === "automatic meter reading")
       await page.evaluate(() => {
         const s = JSON.parse(localStorage.getItem("pulse-demo-v1"));
@@ -83,33 +91,35 @@ try {
     "/patient/home",
     2,
     async (page, m) => {
-      const rows = page.locator(".m-row").filter({ hasText: "21:30" });
-      const n = await rows.count();
-      if (!n) throw new Error("No 9:30 PM slot");
-      for (const row of await rows.all()) {
-        const button = row.getByRole("button", {
-          name: "Mark taken",
-          exact: true,
-        });
-        if (await button.count()) await m.click(button);
-      }
-      if (
-        await rows
-          .getByRole("button", { name: "Mark taken", exact: true })
-          .count()
-      )
-        throw new Error("Slot is not fully taken");
+      const card = page.locator('[data-next-action="medicine"]');
+      if (!/9:30 PM/.test(await card.innerText()))
+        throw new Error("9:30 PM slot not next");
+      await m.click(card.getByRole("button", { name: /^Taken( all)?$/ }));
+      const taken = await page.evaluate(() => {
+        const s = JSON.parse(localStorage.getItem("pulse-demo-v1"));
+        const rx = s.prescriptions
+          .filter((r) => r.patientId === "PUL-KNP-0001")
+          .at(-1);
+        return rx.medicines
+          .filter((m) => m.times.includes("21:30"))
+          .every((m) =>
+            s.doses.some(
+              (d) =>
+                d.id === `DOSE-PUL-KNP-0001-90-${m.generic}-21:30` &&
+                d.status === "taken",
+            ),
+          );
+      });
+      if (!taken) throw new Error("Slot is not fully taken");
     },
   );
   await journey(
-    "prescribed fasting reading by hand, including entry navigation",
+    "prescribed fasting reading by hand from due Today card",
     "patient",
     "/patient/home",
     4,
     async (page, m) => {
-      await m.click(
-        page.getByRole("button", { name: "Log glucose", exact: true }),
-      );
+      await page.locator('[data-next-action="test"] .keypad').waitFor();
       for (const key of ["1", "2", "8"])
         await m.click(
           page
@@ -181,7 +191,7 @@ try {
     },
   );
   console.log(
-    `Friction: ${failures} failing journeys (budgets remain strict; F3–F7 work is separate)`,
+    `Friction: ${failures} failing journeys (all clicks counted; PIN is the sole typing exception)`,
   );
   if (failures) process.exitCode = 1;
 } finally {

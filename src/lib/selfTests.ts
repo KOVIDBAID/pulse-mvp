@@ -882,5 +882,170 @@ export function selfTests() {
     const a = E.testingAdherence(s);
     return a.done === 1 && a.due === 4;
   });
+  test(
+    "calm",
+    "Several pills share one reminder and one taken action",
+    true,
+    () => {
+      const s = E.seed();
+      s.notifications = [];
+      s.doses = s.doses.filter((d) => d.day !== 90);
+      s.sim.day = 90;
+      E.advance(s, 90, "08:30");
+      const n = s.notifications.filter(
+        (n) =>
+          n.patientId === E.P &&
+          n.day === 90 &&
+          n.time === "08:30" &&
+          n.category === "medicines",
+      );
+      E.takeSlot(s, E.P, 90, "08:30");
+      return (
+        n.length === 1 &&
+        E.medicineSlots(s, E.P).find((r) => r.time === "08:30")?.taken
+      );
+    },
+  );
+  test(
+    "calm",
+    "Snooze reuses the reminder; no missed-dose notification",
+    true,
+    () => {
+      const s = E.seed();
+      s.notifications = [];
+      E.advance(s, 90, "21:30");
+      E.snoozeSlot(s, E.P, 90, "21:30");
+      E.advance(s, 90, "22:00");
+      E.advance(s, 91, "08:00");
+      return (
+        s.notifications.filter(
+          (n) => n.id === "REMIND-SLOT-PUL-KNP-0001-90-21:30",
+        ).length === 1 &&
+        !s.notifications.some(
+          (n) => n.category === "medicines" && /missed/.test(n.body),
+        )
+      );
+    },
+  );
+  test(
+    "calm",
+    "Older patient defaults large; choice survives normalization",
+    true,
+    () => {
+      const s = E.seed();
+      const p = E.patient(s);
+      const first = p.largeText;
+      p.largeText = false;
+      E.normalizeDeviceState(s);
+      return first === true && p.largeText === false;
+    },
+  );
+  test(
+    "plan",
+    "Walk experiment rejects steps outside dinner/check window",
+    true,
+    () => {
+      const s = E.seed();
+      E.patient(s).consents.band = true;
+      HC.connect(s, { ...HC.emptyPermissions(), steps: true });
+      const d = 20;
+      const r = s.wellness.find((r) => r.day === d)!;
+      r.imported = true;
+      r.stepsAfterDinner = 1800;
+      r.activityStart = E.minutes(d, "19:30");
+      r.activityEnd = E.minutes(d, "19:50");
+      return (
+        DS.walk(s, E.P, d, E.minutes(d, "19:00"), E.minutes(d, "21:00")).done &&
+        !DS.walk(s, E.P, d, E.minutes(d, "20:00"), E.minutes(d, "22:00")).done
+      );
+    },
+  );
+  test(
+    "metrics",
+    "Impact leading metric derives from passive records",
+    true,
+    () => {
+      const s = E.seed();
+      for (let day = 14; day < 18; day++)
+        s.walks.push({
+          id: `IMPACT-${day}`,
+          patientId: E.P,
+          day,
+          time: "21:00",
+          source: "typed",
+          value: 1,
+        });
+      const r = E.cohort(s)[0];
+      return r.kept && r.habitDays === 4 && r.habitSource === "typed";
+    },
+  );
+  test(
+    "Health Connect",
+    "No-band patient gains demo series only after explicit consent and connection",
+    true,
+    () => {
+      const s = E.seed(),
+        pid = "PUL-KNP-0002";
+      const before = s.wellness.filter((r) => r.patientId === pid).length;
+      E.patient(s, pid).consents.band = true;
+      HC.connect(s, { ...HC.emptyPermissions(), steps: true }, pid);
+      return (
+        before === 0 &&
+        HC.wellness(s, pid).length > 0 &&
+        E.patient(s, pid).bandOwned === true
+      );
+    },
+  );
+  test(
+    "sources",
+    "A sleep-only band leaves the one-tap walk fallback available",
+    true,
+    () => {
+      const s = E.seed();
+      E.patient(s).consents.band = true;
+      HC.connect(s, { ...HC.emptyPermissions(), sleep: true });
+      s.walks.push({
+        id: "WALK-PERMISSION",
+        patientId: E.P,
+        ...E.stamp(s),
+        source: "typed",
+        measuredAt: E.now(s),
+        value: 1,
+      });
+      return (
+        DS.hasBand(s) &&
+        !DS.hasBandWalks(s) &&
+        DS.walk(s, E.P, s.sim.day).done &&
+        DS.week(s).source === "typed"
+      );
+    },
+  );
+  test(
+    "plan",
+    "Changing the plan preserves elapsed slots without retroactive off-plan penalties",
+    true,
+    () => {
+      const s = E.seed();
+      s.sim.day = 90;
+      s.sim.time = "08:00";
+      const before = E.testingAdherence(s);
+      E.setTestingPlan(
+        s,
+        E.P,
+        {
+          ...E.starterPlan(),
+          schedule: [{ slot: "bedtime", days: [0, 1, 2, 3, 4, 5, 6] }],
+        },
+        "DR-0001",
+      );
+      const after = E.testingAdherence(s);
+      return (
+        before.due === 4 &&
+        after.due === before.due &&
+        after.done === before.done &&
+        E.nextTest(s)?.slot === "bedtime"
+      );
+    },
+  );
   return results;
 }

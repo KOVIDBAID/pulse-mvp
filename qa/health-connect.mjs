@@ -45,6 +45,9 @@ try {
     await page.goto(base + "/#/patient/log/glucose");
     await page.waitForTimeout(250);
     assert.equal((await page.locator(".keypad button").count()) > 0, true);
+    await page
+      .getByRole("button", { name: "Take a photo of your meter", exact: true })
+      .click();
     assert.equal(
       await page.getByLabel("Demo meter photo (simulated OCR)").count(),
       1,
@@ -151,9 +154,11 @@ try {
     .click();
   await page.waitForTimeout(400);
 
-  await page.locator(".freshness.stale").waitFor({ timeout: 3000 });
+  await page.goto(base + "/#/patient/settings");
+  await page.waitForTimeout(250);
+  await page.locator(".freshness.stale").first().waitFor({ timeout: 3000 });
   assert.match(
-    await page.locator(".freshness.stale").innerText(),
+    await page.locator(".freshness.stale").first().innerText(),
     /not synced for 3 days/,
   );
   await page.goto(base + "/#/patient/settings");

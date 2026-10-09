@@ -58,6 +58,9 @@ export function hasBand(s: State, pid = s.session.patientId) {
     Object.entries(c.permissions).some(([k, v]) => k !== "bloodGlucose" && v)
   );
 }
+export function hasBandWalks(s: State, pid = s.session.patientId) {
+  return hasBand(s, pid) && !!s.healthConnect[pid]?.permissions.steps;
+}
 export function value(
   s: State,
   metric: Metric,
@@ -117,10 +120,24 @@ export function value(
     );
   return choose(metric, rows, at(s));
 }
-export function walk(s: State, pid: string, day: number) {
+export function walk(
+  s: State,
+  pid: string,
+  day: number,
+  from?: number,
+  until?: number,
+) {
   const r = value(s, "activity", pid, day);
   return {
-    done: !!r && (r.source === "band" ? r.value >= 1500 : r.value === 1),
+    done:
+      !!r &&
+      (r.source === "band"
+        ? r.value >= 1500 &&
+          (from == null ||
+            (r.activityStart >= from && r.activityEnd <= (until ?? at(s))))
+        : r.value === 1 &&
+          (from == null ||
+            (measured(r) >= from && measured(r) <= (until ?? at(s))))),
     source: r?.source as DataSource | undefined,
     row: r,
   };
@@ -140,7 +157,7 @@ export function week(s: State, pid = s.session.patientId, end = s.sim.day) {
           measured(r) <= at(s),
       ),
     ).length,
-    source: hasBand(s, pid) ? ("band" as const) : ("typed" as const),
+    source: hasBandWalks(s, pid) ? ("band" as const) : ("typed" as const),
   };
 }
 export function summary(s: State, pid = s.session.patientId) {

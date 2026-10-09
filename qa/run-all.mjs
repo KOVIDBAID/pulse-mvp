@@ -19,6 +19,7 @@ if (
         "ia",
         "friction",
         "health-connect",
+        "calm",
       ].includes(name),
   )
 )
