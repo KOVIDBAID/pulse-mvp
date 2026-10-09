@@ -30,7 +30,7 @@ For migrated non-English saved input, preserve `_legacyText` on the same record 
 
 Use src/app/routes.ts as the single source for role navigation, drawers, floating actions, hidden routes, redirects, scenarios and the guide. Regenerate qa/routes.json with node qa/sync-routes.mjs. Keep old hash routes redirecting, including query-selected merged tabs. Family/privacy/data rights, doctor messages/appointments/tests, caregiver notes/report upload and care desk tabs are merged features, not removed features.
 
-Doctor navigation uses a bottom bar below 900px and the same sidebar items at 900px and above. The six patient-profile tabs have no mood tab; the plum Overview mood card requires separate doctorMood consent. Preserve upload exclusions for caregivers. Run node qa/run-all.mjs ia for redirects, scenario destinations, responsive layout, consent and the 14-step guided journey, alongside the existing gates.
+Doctor navigation uses a bottom bar below 900px and the same sidebar items at 900px and above. The five patient-profile tabs are Brief, Charts, Records, Prescriptions and Messages; Health map is inside Records. Brief mood requires separate doctorMood consent. Preserve upload exclusions for caregivers. Run node qa/run-all.mjs ia for redirects, scenario destinations, responsive layout, consent and the 8-step guided journey, alongside the existing gates.
 
 Every change must respect docs/FRICTION.md. The friction pack takes precedence over the earlier navigation checkpoint. Feature flags in src/app/features.ts park UI only; keep the rules and tests.
 
@@ -38,3 +38,5 @@ Health Connect in src/lib/healthConnect.ts is simulated. Keep sensor permissions
 
 
 The current friction checkpoints require every journey to pass. Keep the due fasting keypad directly on Today (Friday 07:30 in QA); count all three digit taps and Save. Bundle medicines by time slot, retain missed-dose records without separate missed notifications, and retain testing-plan signature/verification gates. Use testingPlan.experiment for Sugar Detective availability, never the removed sugarDetectivePrescribed boolean. Use dataSources for provenance and passive walks; band metrics never invoke clinical alerts. No-band invitations appear only in Connected devices. Run `node qa/run-all.mjs calm` for 412×915 placement, including the complete Progress teaser above the bottom bar in the morning keypad state.
+
+Caregiver calm mode: status summaries use only approved categories; open urgent alerts occupy Home. Only urgent safety alerts push; other notifications are quiet Updates. Payments appears only for the payer. Doctor Today has appointments and at most five actionable review items. Renew same reuses prescribing validation and the persistent PIN lock; patients still confirm reminders. Navigation uses exact destinations, per-tab icons and one visible aria-current. Run node qa/run-all.mjs demo-critical for regression coverage.

@@ -570,6 +570,8 @@ export function canNudge(s: State, pid: string, type: string, sprint = false) {
   return prior.length < (sprint ? 3 : 2);
 }
 export const RULE_LABELS: Record<string, string> = {
+  S0: "Check once more",
+  S8: "Follow-up check",
   S1: "Very low sugar",
   S2: "Low sugar",
   S3: "Repeat low",
@@ -583,6 +585,12 @@ export const RULE_LABELS: Record<string, string> = {
   P2: "Routine",
 };
 export const ruleLabel = (rule: string) => RULE_LABELS[rule] || rule;
+export const displayText = (text: string) =>
+  text
+    .replace(/\b(?:S[0-8]|W3|P[012])\b/g, ruleLabel)
+    .replace("No future results are shown.", "")
+    .replace("Clinic: for your review", "")
+    .replace("Demo notifications recorded", "");
 export function notify(
   s: State,
   pid: string,
@@ -645,7 +653,7 @@ export function alert(
     timeline: [
       {
         ...stamp(s),
-        text: `Rule ${rule} created · patient shown fixed safety instructions`,
+        text: `${ruleLabel(rule)} · safety steps shown`,
       },
     ],
     severe: source.severe,
@@ -656,7 +664,7 @@ export function alert(
     pid,
     pid,
     "alerts",
-    `Safety ${rule}`,
+    ruleLabel(rule),
     "Please open the safety card",
     `N-${id}-P`,
     "safety",
@@ -668,7 +676,7 @@ export function alert(
       "TEAM",
       "mood",
       "Private callback requested",
-      `S7 · ${staffed ? "callback within 60 minutes" : "callback at 08:00"}`,
+      `Crisis support · ${staffed ? "callback within 60 minutes" : "callback at 08:00"}`,
       `N-${id}-T`,
     );
     return;
@@ -679,7 +687,7 @@ export function alert(
       patientId: pid,
       ...stamp(s),
       recipient: `${safetyContact(s, pid).name} (local contact)`,
-      body: `Safety ${rule}`,
+      body: ruleLabel(rule),
       status: s.sim.online ? "sent" : "queued",
     });
     a.timeline.push({
@@ -695,7 +703,7 @@ export function alert(
           pid,
           l.viewer,
           "alerts",
-          `Urgent safety ${rule}`,
+          ruleLabel(rule),
           `${source.value ?? "Symptoms reported"} · call the patient or local contact`,
           `${id}-${l.viewer}`,
           "alerts",
@@ -707,7 +715,7 @@ export function alert(
       pid,
       "TEAM",
       rule === "P1" ? "mood" : "alerts",
-      `${priority} · ${rule}`,
+      `${ruleLabel(priority)} · ${ruleLabel(rule)}`,
       "For care-team review",
       `N-${id}-T`,
     );
@@ -1553,8 +1561,8 @@ export function seed(): State {
       evenings: rises.map((rise, i) => ({
         day: start + i,
         arm: i % 2 ? "B" : "A",
-        before: 120,
-        after: 120 + rise,
+        before: [115, 128, 139, 121, 145, 133][i],
+        after: [115, 128, 139, 121, 145, 133][i] + rise,
         fasting: i % 2 ? null : [92, 88, 84][Math.floor(i / 2)],
       })),
     });
@@ -1665,6 +1673,85 @@ export function seed(): State {
     "moodChecks",
   ] as const)
     s[key].sort((a, b) => minutes(a.day, a.time) - minutes(b.day, b.time));
+  s.labs.push({
+    id: "LAB-SUSHMA-PENDING",
+    patientId: "PUL-KNP-0002",
+    day: 90,
+    time: "09:15",
+    value: 6.8,
+    verified: false,
+    source: "lab",
+    provider: "Demo Diagnostics",
+  });
+  const updates = [
+    [
+      "CG-0001",
+      "summary",
+      "Your family's weekly summary",
+      "A shared update is ready",
+      "updates",
+      P,
+    ],
+    [
+      "CG-0001",
+      "proof",
+      "Day-90 result ready",
+      "Ramesh's shared Proof Card is ready",
+      "home",
+      P,
+    ],
+    [
+      "CG-0001",
+      "billing",
+      "Payment due in 5 days",
+      "Your next care payment is due in 5 days",
+      "billing",
+      P,
+    ],
+    [
+      "CG-0001",
+      "medicines",
+      "Medicines: on track",
+      "Shared weekly medicine update",
+      "updates",
+      P,
+    ],
+    [
+      "DR-0001",
+      "labs",
+      "Ramesh HbA1c ready",
+      "Verified lab ready for your review",
+      `patient/${P}/overview`,
+      P,
+    ],
+    [
+      "DR-0001",
+      "labs",
+      "Sushma: new unverified lab",
+      "Please review the uploaded report",
+      "patient/PUL-KNP-0002/records",
+      "PUL-KNP-0002",
+    ],
+    [
+      "DR-0001",
+      "message",
+      "Message reply due in 6 h",
+      "Ramesh has a question for your review",
+      `patient/${P}/messages`,
+      P,
+    ],
+    [
+      "DR-0001",
+      "tests",
+      "Ramesh's testing summary",
+      "Testing adherence versus the prescribed plan",
+      `patient/${P}/overview`,
+      P,
+    ],
+  ];
+  updates.forEach(([audience, category, title, body, link, pid], i) =>
+    notify(s, pid, audience, category, title, body, `DEMO-UPDATE-${i}`, link),
+  );
   return normalizeDeviceState(s);
 }
 export function cohort(s?: State) {
@@ -1838,6 +1925,13 @@ export function migrateState(value: any): State {
 /** Backfill provenance without changing rules, consent or saved values. */
 export function normalizeDeviceState(s: State): State {
   s.healthConnect ||= {};
+  for (const n of s.notifications)
+    if (n.audience?.startsWith("CG"))
+      n.push =
+        n.category === "alerts" &&
+        view(s, n.audience, n.patientId, "alerts", s.alerts).some(
+          (a) => a.priority === "P0" && n.id.includes(a.id),
+        );
   for (const n of s.notifications)
     if (
       n.category === "medicines" &&

@@ -1047,5 +1047,45 @@ export function selfTests() {
       );
     },
   );
+  test(
+    "caregiver",
+    "Only urgent permitted safety alerts push; weekly updates remain quiet after migration",
+    true,
+    () => {
+      const s = E.seed();
+      const updates = s.notifications.filter((n) => n.audience === "CG-0001");
+      if (updates.some((n) => n.push)) return false;
+      updates.forEach((n) => (n.push = true));
+      E.normalizeDeviceState(s);
+      if (updates.some((n) => n.push)) return false;
+      E.recordReading(s, { value: 52, measuredAt: E.now(s) });
+      return (
+        s.notifications.some(
+          (n) => n.audience === "CG-0001" && n.category === "alerts" && n.push,
+        ) &&
+        !s.notifications.some(
+          (n) =>
+            n.audience.startsWith("CG") && n.category !== "alerts" && n.push,
+        )
+      );
+    },
+  );
+  test(
+    "sprint",
+    "Varied pre-dinner values preserve walking and kitchen effects",
+    true,
+    () => {
+      const s = E.seed();
+      return (
+        s.sprints.every(
+          (sp) =>
+            new Set(sp.evenings.map((e: any) => e.before)).size > 1 &&
+            sp.evenings.every((e: any) => e.before >= 115 && e.before <= 145),
+        ) &&
+        E.sprintResult(s.sprints[0].evenings).effect === 31 &&
+        E.sprintResult(s.sprints[1].evenings).effect === 18
+      );
+    },
+  );
   return results;
 }

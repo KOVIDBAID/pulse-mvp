@@ -72,7 +72,7 @@ export const ROUTES: Record<
           d("family", "What's shared with me"),
           d("myth", "True or false?"),
           d("settings", "Settings"),
-          d("help", "Help"),
+          d("help", "Help & complaints"),
         ],
       },
     ],
@@ -99,19 +99,19 @@ export const ROUTES: Record<
         items: [
           d("outcomes", "Practice outcomes"),
           d("settings", "Settings"),
-          d("help", "Help"),
+          d("help", "Help & complaints"),
         ],
       },
     ],
-    hidden: ["patient"],
-    redirects: { profile: "settings", notifications: "home" },
+    hidden: ["patient", "notifications"],
+    redirects: { profile: "settings" },
   },
   team: {
     nav: [d("desk", "Care desk")],
     drawer: [
       {
         title: "Account",
-        items: [d("settings", "Settings"), d("help", "Help")],
+        items: [d("settings", "Settings"), d("help", "Help & complaints")],
       },
     ],
     hidden: ["myths", "impact"],
@@ -177,37 +177,19 @@ export function allowedPages(role: Role): string[] {
     .concat(ROUTES[role].hidden);
 }
 export const GUIDE: [string, Role, string, number][] = [
-  ["Ramesh chooses family sharing", "patient", "family", 0],
-  ["Review the six-evening walking result", "patient", "sugar-detective", 10],
-  ["Amit sees permitted progress", "caregiver", "home", 10],
+  ["Ramesh Today", "patient", "home", 90],
+  ["Meter sync 52 → safety screen", "patient", "safety", 90],
+  ["Amit's urgent alert → I've spoken to him", "caregiver", "home", 90],
+  ["Ramesh logs 100 → resolved", "patient", "home", 90],
+  ["Dr. Verma Today → Ramesh Brief", "doctor", "home", 90],
   [
-    FEATURES.weeklyQuestionnaire
-      ? "Ramesh’s Sunday check"
-      : "Ramesh reviews Today",
-    "patient",
-    FEATURES.weeklyQuestionnaire ? "weekly" : "home",
-    22,
-  ],
-  ["Pooja reviews the support queue", "team", "desk", 22],
-  ["Ramesh sends a private message to his doctor", "patient", "doctor", 22],
-  ["Dr. Verma reviews Today", "doctor", "home", 45],
-  ["Inject Low 52 and open safety steps", "patient", "safety", 45],
-  ["Amit handles the shared alert", "caregiver", "alerts", 45],
-  [
-    "Dr. Verma reviews the Health map",
+    "Renew same with PIN 246810",
     "doctor",
-    "patient/PUL-KNP-0001/map",
+    "patient/PUL-KNP-0001/prescriptions/new?renew=1",
     90,
   ],
-  [
-    "Sign a renewal with PIN 246810",
-    "doctor",
-    "patient/PUL-KNP-0001/prescriptions/new",
-    90,
-  ],
-  ["Ramesh’s Day-90 Proof Card", "patient", "proof", 90],
-  ["Amit renews using mock UPI", "caregiver", "billing", 90],
-  ["Pooja reviews the support queue", "team", "desk", 90],
+  ["Ramesh confirms reminders → Proof Card", "patient", "home", 90],
+  ["Pooja Impact", "team", "impact", 90],
 ];
 export const SCENARIOS: Record<
   string,

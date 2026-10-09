@@ -181,7 +181,7 @@ try {
     const [label, role, path] = config.GUIDE[i];
     await page
       .locator(".guide b")
-      .filter({ hasText: `${i + 1}/14 · ${label}` })
+      .filter({ hasText: `${i + 1}/${config.GUIDE.length} · ${label}` })
       .waitFor();
     await page.waitForTimeout(350);
     assert.equal(new URL(page.url()).hash, `#/${role}/${path}`);
@@ -189,7 +189,40 @@ try {
       await page.locator("body").innerText(),
       /Page not found|[\u0900-\u097f]/u,
     );
-    if (i < 13)
+    if (i === 2)
+      await page
+        .getByRole("button", { name: "I've spoken to him", exact: true })
+        .click();
+    if (i === 4) {
+      await page
+        .getByRole("button", { name: "Open", exact: true })
+        .first()
+        .click();
+      await page
+        .getByRole("button", { name: "Renew same", exact: true })
+        .waitFor();
+    }
+    if (i === 5) {
+      await page.getByLabel("6-digit signing PIN").fill("246810");
+      await page
+        .getByRole("button", { name: "Sign & send to patient", exact: true })
+        .click();
+      await page.getByText("Signed & delivered", { exact: true }).waitFor();
+    }
+    if (i === 6) {
+      await page
+        .getByRole("button", {
+          name: "Confirm new medicine reminders",
+          exact: true,
+        })
+        .click();
+      await page
+        .locator(".guide")
+        .getByRole("button", { name: "Next", exact: true })
+        .click();
+      await page.waitForURL("**/#/patient/proof");
+    }
+    if (i < config.GUIDE.length - 1)
       await page
         .locator(".guide")
         .getByRole("button", { name: "Next", exact: true })
@@ -205,7 +238,7 @@ try {
   await context.close();
   assert.deepEqual(errors, []);
   console.log(
-    "PASS guided demo: 14/14 canonical steps; zero console or runtime errors",
+    "PASS guided demo: 8/8 canonical steps; zero console or runtime errors",
   );
 } catch (error) {
   console.error(`FAIL IA: ${error.stack}`);

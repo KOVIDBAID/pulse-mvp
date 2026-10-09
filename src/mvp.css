@@ -1332,3 +1332,95 @@ h3 {
   white-space: nowrap;
   color: #1f6f5c;
 }
+
+/* Demo controls leave navigation and primary actions clear. */
+.demo-pill {
+  left: 8px !important;
+  right: auto !important;
+  bottom: 80px !important;
+  padding: 5px 9px !important;
+  font-size: 11px !important;
+  min-height: 30px;
+}
+.m-content {
+  padding-bottom: 150px;
+}
+.m-toast {
+  bottom: 116px !important;
+  pointer-events: none;
+}
+.m-top button[aria-label="Notifications"] span {
+  background: #1f6f5c;
+}
+.m-top .patient-help {
+  background: #b42318;
+  color: white;
+  min-height: 48px;
+  padding: 8px;
+  border-radius: 24px;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.role-patient .m-top {
+  gap: 5px;
+}
+.role-patient .m-top > div {
+  min-width: 0;
+  flex: 1;
+}
+.role-patient .m-top b {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.role-patient .m-top small {
+  font-size: 10px;
+}
+.renew-preview .rx-paper {
+  width: 100%;
+  box-shadow: none;
+  padding: 16px;
+  max-height: none;
+}
+
+.m-badge.steady {
+  background: #e8f3ef;
+  color: #1f6f5c;
+}
+.m-badge.amber {
+  background: #fff4e0;
+  color: #8a5400;
+}
+
+/* A reserved top strip keeps guided controls away from product actions. */
+.guide {
+  top: 0;
+  bottom: auto;
+  left: 0;
+  right: 0;
+  max-width: none;
+  padding: 10px 16px;
+  border-radius: 0 0 12px 12px;
+}
+.guide .m-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  margin-top: 6px;
+}
+.guide button {
+  width: auto;
+}
+.guided-demo .m-app {
+  padding-top: 150px;
+}
+.guided-demo .m-top {
+  top: 150px;
+}
+
+.m-drawer {
+  width: min(440px, calc(100% - 48px));
+}

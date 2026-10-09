@@ -1,0 +1,655 @@
+$ pnpm typecheck && pnpm test && pnpm build
+$ tsc --noEmit
+$ node tests/run.mjs
+PASS clock: Day 90 = 9 Oct 2026
+PASS safety: 52 fresh
+PASS safety: Meter LO
+PASS safety: 64 fresh
+PASS safety: Repeat low in 24h
+PASS safety: Stale 52 measured 7h ago
+PASS safety: High 320
+PASS safety: Two fasting readings under 80
+PASS safety: Normal 120
+PASS text: Hindi crisis
+PASS text: English first-person crisis
+PASS text: Female Hindi crisis
+PASS text: Female Hinglish crisis
+PASS text: Mosquito statement is not a crisis
+PASS text: Hinglish cardiac
+PASS text: No crisis for ordinary heat complaint
+PASS mood: PHQ-9 item 9 positive
+PASS mood: PHQ-9 total 12
+PASS mood: PHQ-2 total 2
+PASS sprint: Walk effect and consistency
+PASS sprint: Food effect computed from data
+PASS sprint: Insufficient A evenings
+PASS sprint: Effect below 15
+PASS privacy: CG-0001 → mood
+PASS privacy: CG-0001 → alerts
+PASS privacy: CG-0002 → medicines
+PASS privacy: LOCAL → readings
+PASS privacy: DR-0001 → mood
+PASS privacy: DR-0002 → readings
+PASS privacy: Sensitive upload hidden from uploader
+PASS privacy: Caregiver receives no forbidden records
+PASS privacy: Revocation takes immediate effect
+PASS privacy: Deleted patient inaccessible
+PASS cycle: Guarantee excludes −0.7 change
+PASS cycle: Guarantee for weak change with 8 checks
+PASS cycle: Sushma qualifies for Maintenance
+PASS cycle: No future follow-up lab at day 3
+PASS cycle: 13 weekly checks at day 90
+PASS cycle: Unverified lab excluded
+PASS rx: Unverified doctor blocked
+PASS rx: Audio chronic follow-up needs prior in-person
+PASS myth: Stop medicine claim
+PASS myth: Walk after dinner
+PASS myth: Cricket
+PASS myth: Unknown health claim
+PASS injector: Low notifies permitted caregivers
+PASS injector: Crisis excludes caregiver recipients
+PASS injector: Private crisis sends no alerts
+PASS injector: Offline low runs safety and queues SMS
+PASS injector: Offline contact sends on reconnect
+PASS injector: No recheck after 20 sim-minutes escalates
+PASS injector: Fresh normal recheck resolves low
+PASS injector: Time advance is idempotent
+PASS injector: Time travel preserves records but hides future
+PASS notify: Quiet hours blocks proactive nudge
+PASS notify: Safety bypasses quiet hours
+PASS metrics: Numerator cannot exceed denominator
+PASS metrics: Seeded cohort is deterministic
+PASS privacy: Weekly summary has no mood feeling
+PASS privacy: Caregiver alert projection excludes mood and clinic-only flags
+PASS offline: Remote caregiver cannot see an undelivered offline low
+PASS offline: Reconnection makes the low available to caregiver
+PASS privacy: Future family approval is hidden
+PASS rx: Negative medicine duration is blocked
+PASS sprint: Missed plan extends by at most two evenings
+PASS metrics: All clinics exist in each monthly cohort
+PASS migration: Version 3 preserves safety, consent and habit calculations
+PASS migration: All four medicine instructions migrate, including drafts
+PASS migration: Version 4 migration is idempotent
+PASS migration: Unsupported save version reseeds
+PASS session: Legacy tab login keeps role while dropping language
+PASS migration: Unlisted legacy text stays available in export but is not displayed
+PASS migration: Archived symptoms still trigger the original low-sugar rule
+PASS migration: Existing version 4 saves also normalize unknown old text
+PASS migration: Unknown prescription instructions require review rather than an invented translation
+PASS Health Connect: Permission sheet defaults all off
+PASS Health Connect: Extreme band SpO2 and HR never create alerts
+PASS Health Connect: Meter-sync 52 creates S1
+PASS Health Connect: Stale meter-sync uses device time and follows S0
+PASS Health Connect: Denied glucose and disconnected devices cannot ingest
+PASS Health Connect: Ramesh has 90 varied synthetic days, Sushma none
+PASS Health Connect: Sync imports only elapsed days and leaves three-day gap
+PASS Health Connect: Repeated sync does not duplicate meter readings
+PASS Health Connect: Disconnect stops importing; delete removes wellness history
+PASS Health Connect: Wellness consent remains off when sensor permissions are granted
+PASS Health Connect: Freshness becomes amber at 72 hours
+PASS Health Connect: Denied hydration and HR stay absent from imported data
+PASS Health Connect: Reconnecting after deletion imports permitted synthetic history
+PASS features: Only Ramesh has the seeded prescribed experiment
+PASS sources: One gentle notice per 72-hour sync outage
+PASS sources: Band has priority over manual walks; no hydration fallback
+PASS sources: Fresh typed low cannot be hidden by older meter data
+PASS plan: Off-plan low retains S1 safety
+PASS plan: Verified plan change replaces future reminders
+PASS plan: Unprescribed experiment absent on no-band patient
+PASS plan: Band and tap walks produce identical leading results
+PASS plan: Off-plan days do not enter testing denominator
+PASS calm: Several pills share one reminder and one taken action
+PASS calm: Snooze reuses the reminder; no missed-dose notification
+PASS calm: Older patient defaults large; choice survives normalization
+PASS plan: Walk experiment rejects steps outside dinner/check window
+PASS metrics: Impact leading metric derives from passive records
+PASS Health Connect: No-band patient gains demo series only after explicit consent and connection
+PASS sources: A sleep-only band leaves the one-tap walk fallback available
+PASS plan: Changing the plan preserves elapsed slots without retroactive off-plan penalties
+PASS caregiver: Only urgent permitted safety alerts push; weekly updates remain quiet after migration
+PASS sprint: Varied pre-dinner values preserve walking and kitchen effects
+
+107/107 checks passed
+$ vite build
+vite v8.0.5 building client environment for production...
+[2Ktransforming...✓ 1916 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                                     0.57 kB │ gzip:   0.37 kB
+dist/assets/noto-sans-greek-ext-400-normal-i2oSBwXz.woff2           4.87 kB
+dist/assets/noto-sans-greek-ext-700-normal-Dq1WA5-1.woff2           4.94 kB
+dist/assets/noto-sans-greek-ext-600-normal-B4z4a2vi.woff2           4.97 kB
+dist/assets/noto-sans-vietnamese-400-normal-D2wP-Vm-.woff2          5.31 kB
+dist/assets/noto-sans-vietnamese-700-normal-DayJ0F-f.woff2          5.70 kB
+dist/assets/noto-sans-vietnamese-600-normal-mhyQDSzg.woff2          5.83 kB
+dist/assets/ibm-plex-sans-vietnamese-400-normal-fK1oJ5dG.woff       6.39 kB
+dist/assets/noto-sans-greek-ext-400-normal-L11LEhi4.woff            6.43 kB
+dist/assets/noto-sans-greek-ext-700-normal-BOmIwFkq.woff            6.49 kB
+dist/assets/noto-sans-greek-ext-600-normal-BjvVOqxV.woff            6.50 kB
+dist/assets/ibm-plex-sans-vietnamese-600-normal-DgdngZtN.woff       6.58 kB
+dist/assets/noto-sans-cyrillic-400-normal-CHP_ranX.woff2            7.09 kB
+dist/assets/noto-sans-vietnamese-400-normal-C3Al4sv4.woff           7.12 kB
+dist/assets/noto-sans-cyrillic-700-normal-DYZmzPmX.woff2            7.28 kB
+dist/assets/noto-sans-cyrillic-600-normal-KpAl9xZA.woff2            7.36 kB
+dist/assets/noto-sans-vietnamese-600-normal-D0HZFEqa.woff           7.67 kB
+dist/assets/noto-sans-vietnamese-700-normal-1GL2JyGE.woff           7.70 kB
+dist/assets/noto-sans-greek-400-normal-DCESwnT1.woff2               7.88 kB
+dist/assets/noto-sans-greek-700-normal-x3kNWF-0.woff2               8.00 kB
+dist/assets/noto-sans-greek-600-normal-CT9U7UAD.woff2               8.02 kB
+dist/assets/ibm-plex-sans-vietnamese-400-normal-DG4YqDda.woff2      8.20 kB
+dist/assets/ibm-plex-sans-vietnamese-600-normal-DpPYBSTl.woff2      8.46 kB
+dist/assets/ibm-plex-sans-greek-400-normal-D9ESIMu3.woff            8.76 kB
+dist/assets/noto-sans-cyrillic-400-normal-BDYvNhAR.woff             8.99 kB
+dist/assets/noto-sans-cyrillic-700-normal-D8UNalU-.woff             9.13 kB
+dist/assets/ibm-plex-sans-greek-600-normal-D-CqTdkO.woff            9.22 kB
+dist/assets/noto-sans-cyrillic-600-normal-BRIw9PIU.woff             9.24 kB
+dist/assets/noto-sans-greek-400-normal-Be2BcUUc.woff                9.91 kB
+dist/assets/ibm-plex-sans-greek-400-normal-_efipK4i.woff2           9.94 kB
+dist/assets/noto-sans-greek-700-normal-DDNJsN3F.woff               10.05 kB
+dist/assets/noto-sans-greek-600-normal-C0bz_iEd.woff               10.06 kB
+dist/assets/ibm-plex-sans-cyrillic-ext-400-normal-Dsrv2Tcn.woff    10.28 kB
+dist/assets/ibm-plex-sans-greek-600-normal-DzTrcv_p.woff2          10.36 kB
+dist/assets/ibm-plex-sans-cyrillic-ext-600-normal-Bz0x94Yp.woff    10.61 kB
+dist/assets/ibm-plex-sans-cyrillic-ext-400-normal-g30qAdWV.woff2   12.14 kB
+dist/assets/ibm-plex-sans-cyrillic-ext-600-normal-DUMzJB7m.woff2   12.30 kB
+dist/assets/noto-sans-latin-400-normal-BTkUljjl.woff2              13.12 kB
+dist/assets/noto-sans-latin-700-normal-CrvTEWhy.woff2              13.46 kB
+dist/assets/noto-sans-latin-600-normal-Dkgu5AE5.woff2              13.49 kB
+dist/assets/ibm-plex-sans-cyrillic-400-normal-BTotfTJu.woff        13.51 kB
+dist/assets/ibm-plex-sans-cyrillic-600-normal-BGq0mW3O.woff        13.88 kB
+dist/assets/ibm-plex-sans-latin-ext-400-normal-RBey6euL.woff       14.36 kB
+dist/assets/ibm-plex-sans-latin-ext-600-normal-DIrixKbi.woff       14.77 kB
+dist/assets/ibm-plex-sans-cyrillic-400-normal-DZqxrq2p.woff2       14.80 kB
+dist/assets/ibm-plex-sans-cyrillic-600-normal-71GNu3SW.woff2       15.04 kB
+dist/assets/ibm-plex-sans-latin-ext-400-normal-C5H60-Va.woff2      15.98 kB
+dist/assets/ibm-plex-sans-latin-ext-600-normal-DOrvGEcy.woff2      16.44 kB
+dist/assets/noto-sans-latin-400-normal-DPpKfCgK.woff               16.68 kB
+dist/assets/noto-sans-latin-700-normal-ZyrKABVF.woff               16.95 kB
+dist/assets/noto-sans-latin-600-normal-DVJMj_t0.woff               17.10 kB
+dist/assets/ibm-plex-sans-latin-400-normal-CYLoc0-x.woff           22.10 kB
+dist/assets/noto-sans-cyrillic-ext-400-normal-BjDhGU6t.woff2       22.22 kB
+dist/assets/noto-sans-cyrillic-ext-700-normal-OK-fZO_i.woff2       22.26 kB
+dist/assets/ibm-plex-sans-latin-400-normal-CDDApCn2.woff2          22.58 kB
+dist/assets/noto-sans-cyrillic-ext-600-normal-DlWr7wnj.woff2       23.03 kB
+dist/assets/ibm-plex-sans-latin-600-normal-Cu4Hd6ag.woff           23.87 kB
+dist/assets/ibm-plex-sans-latin-600-normal-CuJfVYMP.woff2          24.25 kB
+dist/assets/noto-sans-cyrillic-ext-700-normal-D83T7awq.woff        28.41 kB
+dist/assets/noto-sans-cyrillic-ext-400-normal-d9FrwbiD.woff        28.68 kB
+dist/assets/noto-sans-cyrillic-ext-600-normal-Cwz1867h.woff        29.36 kB
+dist/assets/noto-sans-devanagari-400-normal-C3FccbrF.woff2         42.67 kB
+dist/assets/noto-sans-devanagari-600-normal-Ewgvvq1j.woff2         45.73 kB
+dist/assets/noto-sans-devanagari-700-normal-DVs0dmkg.woff2         45.83 kB
+dist/assets/noto-sans-latin-ext-400-normal-CVf-LbaS.woff2          55.64 kB
+dist/assets/noto-sans-devanagari-400-normal-g9fsM2jL.woff          58.86 kB
+dist/assets/noto-sans-latin-ext-700-normal-BypTtJma.woff2          59.14 kB
+dist/assets/noto-sans-latin-ext-600-normal-Has_8ph9.woff2          60.20 kB
+dist/assets/noto-sans-devanagari-700-normal-CT12sGlc.woff          61.37 kB
+dist/assets/noto-sans-devanagari-600-normal-Bly84zfI.woff          61.38 kB
+dist/assets/noto-sans-latin-ext-400-normal-CNh9dRW_.woff           78.44 kB
+dist/assets/noto-sans-latin-ext-700-normal-CgsG9aVh.woff           82.42 kB
+dist/assets/noto-sans-latin-ext-600-normal-B3lLaxXr.woff           83.25 kB
+dist/assets/index-DsXFFfhf.css                                    127.68 kB │ gzip:  24.04 kB
+dist/assets/index-CxUWNO0-.js                                     409.23 kB │ gzip: 127.60 kB
+
+✓ built in 817ms
+$ node qa/no-devanagari.mjs
+No Devanagari outside the allowlist
+Verified owned production preview: http://127.0.0.1:5175
+PASS route: /patient/home
+PASS route: /patient/progress
+PASS route: /patient/records
+PASS route: /patient/doctor
+PASS route: /patient/log
+PASS route: /patient/sugar-detective
+PASS route: /patient/mood
+PASS route: /patient/myth
+PASS route: /patient/notes
+PASS route: /patient/family
+PASS route: /patient/billing
+PASS route: /patient/settings
+PASS route: /patient/help
+PASS favicon
+PASS route: /caregiver/home
+PASS route: /caregiver/updates
+PASS route: /caregiver/billing
+PASS route: /caregiver/connect
+PASS route: /caregiver/family
+PASS route: /caregiver/myth
+PASS route: /caregiver/settings
+PASS route: /caregiver/help
+PASS favicon
+PASS route: /doctor/home
+PASS route: /doctor/patients
+PASS route: /doctor/messages
+PASS route: /doctor/appointments
+PASS route: /doctor/outcomes
+PASS route: /doctor/settings
+PASS route: /doctor/help
+PASS favicon
+PASS route: /team/desk
+PASS route: /team/settings
+PASS route: /team/help
+PASS favicon
+Sweep: 0 failures
+PASS clicks: patient navigation and in-app rules
+PASS 9:30 PM medicine slot: 1 taps, 0 typed fields, 0 PIN fields (budget 2)
+PASS prescribed fasting reading by hand from due Today card: 4 taps, 0 typed fields, 0 PIN fields (budget 4)
+PASS automatic meter reading: 0 taps, 0 typed fields, 0 PIN fields (budget 0)
+PASS caregiver status after launch login: 0 taps, 0 typed fields, 0 PIN fields (budget 0)
+PASS doctor renews Ramesh from Today: 3 taps, 0 typed fields, 1 PIN fields (budget 3)
+Friction: 0 failing journeys (all clicks counted; PIN is the sole typing exception)
+PASS calm 412×915: three primary cards above fold, extras below fold; three Progress cards; passive band detail
+PASS no-band path: one Settings invitation, no unprescribed experiment, no water/meal prompts, normal reading needs no ownership question
+PASS 72-hour band outage: exactly one gentle notification across reloads; zero runtime errors
+PASS 26 legacy redirects, merged screens, doctor mood consent and responsive navigation
+PASS all 12 scenarios switch identity and open their destination
+PASS guided demo: 8/8 canonical steps; zero console or runtime errors
+PASS caregiver: consent-gated summaries, quiet Updates and payer-only navigation
+PASS navigation, Help links, plain alerts and urgent Home isolation
+PASS doctor: five-tab Brief, private mood, renewal date, persistent PIN lock, unchanged medicines and logged review
+PASS demo-critical: zero runtime errors
+Owned preview stopped
+$ pnpm typecheck && pnpm test && pnpm build
+$ tsc --noEmit
+$ node tests/run.mjs
+PASS clock: Day 90 = 9 Oct 2026
+PASS safety: 52 fresh
+PASS safety: Meter LO
+PASS safety: 64 fresh
+PASS safety: Repeat low in 24h
+PASS safety: Stale 52 measured 7h ago
+PASS safety: High 320
+PASS safety: Two fasting readings under 80
+PASS safety: Normal 120
+PASS text: Hindi crisis
+PASS text: English first-person crisis
+PASS text: Female Hindi crisis
+PASS text: Female Hinglish crisis
+PASS text: Mosquito statement is not a crisis
+PASS text: Hinglish cardiac
+PASS text: No crisis for ordinary heat complaint
+PASS mood: PHQ-9 item 9 positive
+PASS mood: PHQ-9 total 12
+PASS mood: PHQ-2 total 2
+PASS sprint: Walk effect and consistency
+PASS sprint: Food effect computed from data
+PASS sprint: Insufficient A evenings
+PASS sprint: Effect below 15
+PASS privacy: CG-0001 → mood
+PASS privacy: CG-0001 → alerts
+PASS privacy: CG-0002 → medicines
+PASS privacy: LOCAL → readings
+PASS privacy: DR-0001 → mood
+PASS privacy: DR-0002 → readings
+PASS privacy: Sensitive upload hidden from uploader
+PASS privacy: Caregiver receives no forbidden records
+PASS privacy: Revocation takes immediate effect
+PASS privacy: Deleted patient inaccessible
+PASS cycle: Guarantee excludes −0.7 change
+PASS cycle: Guarantee for weak change with 8 checks
+PASS cycle: Sushma qualifies for Maintenance
+PASS cycle: No future follow-up lab at day 3
+PASS cycle: 13 weekly checks at day 90
+PASS cycle: Unverified lab excluded
+PASS rx: Unverified doctor blocked
+PASS rx: Audio chronic follow-up needs prior in-person
+PASS myth: Stop medicine claim
+PASS myth: Walk after dinner
+PASS myth: Cricket
+PASS myth: Unknown health claim
+PASS injector: Low notifies permitted caregivers
+PASS injector: Crisis excludes caregiver recipients
+PASS injector: Private crisis sends no alerts
+PASS injector: Offline low runs safety and queues SMS
+PASS injector: Offline contact sends on reconnect
+PASS injector: No recheck after 20 sim-minutes escalates
+PASS injector: Fresh normal recheck resolves low
+PASS injector: Time advance is idempotent
+PASS injector: Time travel preserves records but hides future
+PASS notify: Quiet hours blocks proactive nudge
+PASS notify: Safety bypasses quiet hours
+PASS metrics: Numerator cannot exceed denominator
+PASS metrics: Seeded cohort is deterministic
+PASS privacy: Weekly summary has no mood feeling
+PASS privacy: Caregiver alert projection excludes mood and clinic-only flags
+PASS offline: Remote caregiver cannot see an undelivered offline low
+PASS offline: Reconnection makes the low available to caregiver
+PASS privacy: Future family approval is hidden
+PASS rx: Negative medicine duration is blocked
+PASS sprint: Missed plan extends by at most two evenings
+PASS metrics: All clinics exist in each monthly cohort
+PASS migration: Version 3 preserves safety, consent and habit calculations
+PASS migration: All four medicine instructions migrate, including drafts
+PASS migration: Version 4 migration is idempotent
+PASS migration: Unsupported save version reseeds
+PASS session: Legacy tab login keeps role while dropping language
+PASS migration: Unlisted legacy text stays available in export but is not displayed
+PASS migration: Archived symptoms still trigger the original low-sugar rule
+PASS migration: Existing version 4 saves also normalize unknown old text
+PASS migration: Unknown prescription instructions require review rather than an invented translation
+PASS Health Connect: Permission sheet defaults all off
+PASS Health Connect: Extreme band SpO2 and HR never create alerts
+PASS Health Connect: Meter-sync 52 creates S1
+PASS Health Connect: Stale meter-sync uses device time and follows S0
+PASS Health Connect: Denied glucose and disconnected devices cannot ingest
+PASS Health Connect: Ramesh has 90 varied synthetic days, Sushma none
+PASS Health Connect: Sync imports only elapsed days and leaves three-day gap
+PASS Health Connect: Repeated sync does not duplicate meter readings
+PASS Health Connect: Disconnect stops importing; delete removes wellness history
+PASS Health Connect: Wellness consent remains off when sensor permissions are granted
+PASS Health Connect: Freshness becomes amber at 72 hours
+PASS Health Connect: Denied hydration and HR stay absent from imported data
+PASS Health Connect: Reconnecting after deletion imports permitted synthetic history
+PASS features: Only Ramesh has the seeded prescribed experiment
+PASS sources: One gentle notice per 72-hour sync outage
+PASS sources: Band has priority over manual walks; no hydration fallback
+PASS sources: Fresh typed low cannot be hidden by older meter data
+PASS plan: Off-plan low retains S1 safety
+PASS plan: Verified plan change replaces future reminders
+PASS plan: Unprescribed experiment absent on no-band patient
+PASS plan: Band and tap walks produce identical leading results
+PASS plan: Off-plan days do not enter testing denominator
+PASS calm: Several pills share one reminder and one taken action
+PASS calm: Snooze reuses the reminder; no missed-dose notification
+PASS calm: Older patient defaults large; choice survives normalization
+PASS plan: Walk experiment rejects steps outside dinner/check window
+PASS metrics: Impact leading metric derives from passive records
+PASS Health Connect: No-band patient gains demo series only after explicit consent and connection
+PASS sources: A sleep-only band leaves the one-tap walk fallback available
+PASS plan: Changing the plan preserves elapsed slots without retroactive off-plan penalties
+PASS caregiver: Only urgent permitted safety alerts push; weekly updates remain quiet after migration
+PASS sprint: Varied pre-dinner values preserve walking and kitchen effects
+
+107/107 checks passed
+$ vite build
+vite v8.0.5 building client environment for production...
+[2Ktransforming...✓ 1916 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                                     0.57 kB │ gzip:   0.37 kB
+dist/assets/noto-sans-greek-ext-400-normal-i2oSBwXz.woff2           4.87 kB
+dist/assets/noto-sans-greek-ext-700-normal-Dq1WA5-1.woff2           4.94 kB
+dist/assets/noto-sans-greek-ext-600-normal-B4z4a2vi.woff2           4.97 kB
+dist/assets/noto-sans-vietnamese-400-normal-D2wP-Vm-.woff2          5.31 kB
+dist/assets/noto-sans-vietnamese-700-normal-DayJ0F-f.woff2          5.70 kB
+dist/assets/noto-sans-vietnamese-600-normal-mhyQDSzg.woff2          5.83 kB
+dist/assets/ibm-plex-sans-vietnamese-400-normal-fK1oJ5dG.woff       6.39 kB
+dist/assets/noto-sans-greek-ext-400-normal-L11LEhi4.woff            6.43 kB
+dist/assets/noto-sans-greek-ext-700-normal-BOmIwFkq.woff            6.49 kB
+dist/assets/noto-sans-greek-ext-600-normal-BjvVOqxV.woff            6.50 kB
+dist/assets/ibm-plex-sans-vietnamese-600-normal-DgdngZtN.woff       6.58 kB
+dist/assets/noto-sans-cyrillic-400-normal-CHP_ranX.woff2            7.09 kB
+dist/assets/noto-sans-vietnamese-400-normal-C3Al4sv4.woff           7.12 kB
+dist/assets/noto-sans-cyrillic-700-normal-DYZmzPmX.woff2            7.28 kB
+dist/assets/noto-sans-cyrillic-600-normal-KpAl9xZA.woff2            7.36 kB
+dist/assets/noto-sans-vietnamese-600-normal-D0HZFEqa.woff           7.67 kB
+dist/assets/noto-sans-vietnamese-700-normal-1GL2JyGE.woff           7.70 kB
+dist/assets/noto-sans-greek-400-normal-DCESwnT1.woff2               7.88 kB
+dist/assets/noto-sans-greek-700-normal-x3kNWF-0.woff2               8.00 kB
+dist/assets/noto-sans-greek-600-normal-CT9U7UAD.woff2               8.02 kB
+dist/assets/ibm-plex-sans-vietnamese-400-normal-DG4YqDda.woff2      8.20 kB
+dist/assets/ibm-plex-sans-vietnamese-600-normal-DpPYBSTl.woff2      8.46 kB
+dist/assets/ibm-plex-sans-greek-400-normal-D9ESIMu3.woff            8.76 kB
+dist/assets/noto-sans-cyrillic-400-normal-BDYvNhAR.woff             8.99 kB
+dist/assets/noto-sans-cyrillic-700-normal-D8UNalU-.woff             9.13 kB
+dist/assets/ibm-plex-sans-greek-600-normal-D-CqTdkO.woff            9.22 kB
+dist/assets/noto-sans-cyrillic-600-normal-BRIw9PIU.woff             9.24 kB
+dist/assets/noto-sans-greek-400-normal-Be2BcUUc.woff                9.91 kB
+dist/assets/ibm-plex-sans-greek-400-normal-_efipK4i.woff2           9.94 kB
+dist/assets/noto-sans-greek-700-normal-DDNJsN3F.woff               10.05 kB
+dist/assets/noto-sans-greek-600-normal-C0bz_iEd.woff               10.06 kB
+dist/assets/ibm-plex-sans-cyrillic-ext-400-normal-Dsrv2Tcn.woff    10.28 kB
+dist/assets/ibm-plex-sans-greek-600-normal-DzTrcv_p.woff2          10.36 kB
+dist/assets/ibm-plex-sans-cyrillic-ext-600-normal-Bz0x94Yp.woff    10.61 kB
+dist/assets/ibm-plex-sans-cyrillic-ext-400-normal-g30qAdWV.woff2   12.14 kB
+dist/assets/ibm-plex-sans-cyrillic-ext-600-normal-DUMzJB7m.woff2   12.30 kB
+dist/assets/noto-sans-latin-400-normal-BTkUljjl.woff2              13.12 kB
+dist/assets/noto-sans-latin-700-normal-CrvTEWhy.woff2              13.46 kB
+dist/assets/noto-sans-latin-600-normal-Dkgu5AE5.woff2              13.49 kB
+dist/assets/ibm-plex-sans-cyrillic-400-normal-BTotfTJu.woff        13.51 kB
+dist/assets/ibm-plex-sans-cyrillic-600-normal-BGq0mW3O.woff        13.88 kB
+dist/assets/ibm-plex-sans-latin-ext-400-normal-RBey6euL.woff       14.36 kB
+dist/assets/ibm-plex-sans-latin-ext-600-normal-DIrixKbi.woff       14.77 kB
+dist/assets/ibm-plex-sans-cyrillic-400-normal-DZqxrq2p.woff2       14.80 kB
+dist/assets/ibm-plex-sans-cyrillic-600-normal-71GNu3SW.woff2       15.04 kB
+dist/assets/ibm-plex-sans-latin-ext-400-normal-C5H60-Va.woff2      15.98 kB
+dist/assets/ibm-plex-sans-latin-ext-600-normal-DOrvGEcy.woff2      16.44 kB
+dist/assets/noto-sans-latin-400-normal-DPpKfCgK.woff               16.68 kB
+dist/assets/noto-sans-latin-700-normal-ZyrKABVF.woff               16.95 kB
+dist/assets/noto-sans-latin-600-normal-DVJMj_t0.woff               17.10 kB
+dist/assets/ibm-plex-sans-latin-400-normal-CYLoc0-x.woff           22.10 kB
+dist/assets/noto-sans-cyrillic-ext-400-normal-BjDhGU6t.woff2       22.22 kB
+dist/assets/noto-sans-cyrillic-ext-700-normal-OK-fZO_i.woff2       22.26 kB
+dist/assets/ibm-plex-sans-latin-400-normal-CDDApCn2.woff2          22.58 kB
+dist/assets/noto-sans-cyrillic-ext-600-normal-DlWr7wnj.woff2       23.03 kB
+dist/assets/ibm-plex-sans-latin-600-normal-Cu4Hd6ag.woff           23.87 kB
+dist/assets/ibm-plex-sans-latin-600-normal-CuJfVYMP.woff2          24.25 kB
+dist/assets/noto-sans-cyrillic-ext-700-normal-D83T7awq.woff        28.41 kB
+dist/assets/noto-sans-cyrillic-ext-400-normal-d9FrwbiD.woff        28.68 kB
+dist/assets/noto-sans-cyrillic-ext-600-normal-Cwz1867h.woff        29.36 kB
+dist/assets/noto-sans-devanagari-400-normal-C3FccbrF.woff2         42.67 kB
+dist/assets/noto-sans-devanagari-600-normal-Ewgvvq1j.woff2         45.73 kB
+dist/assets/noto-sans-devanagari-700-normal-DVs0dmkg.woff2         45.83 kB
+dist/assets/noto-sans-latin-ext-400-normal-CVf-LbaS.woff2          55.64 kB
+dist/assets/noto-sans-devanagari-400-normal-g9fsM2jL.woff          58.86 kB
+dist/assets/noto-sans-latin-ext-700-normal-BypTtJma.woff2          59.14 kB
+dist/assets/noto-sans-latin-ext-600-normal-Has_8ph9.woff2          60.20 kB
+dist/assets/noto-sans-devanagari-700-normal-CT12sGlc.woff          61.37 kB
+dist/assets/noto-sans-devanagari-600-normal-Bly84zfI.woff          61.38 kB
+dist/assets/noto-sans-latin-ext-400-normal-CNh9dRW_.woff           78.44 kB
+dist/assets/noto-sans-latin-ext-700-normal-CgsG9aVh.woff           82.42 kB
+dist/assets/noto-sans-latin-ext-600-normal-B3lLaxXr.woff           83.25 kB
+dist/assets/index-DsXFFfhf.css                                    127.68 kB │ gzip:  24.04 kB
+dist/assets/index-Br5FBAlx.js                                     409.22 kB │ gzip: 127.60 kB
+
+✓ built in 827ms
+$ node qa/no-devanagari.mjs
+No Devanagari outside the allowlist
+Verified owned production preview: http://127.0.0.1:5175
+PASS caregiver: consent-gated summaries, quiet Updates and payer-only navigation
+PASS navigation, Help links, plain alerts and urgent Home isolation
+PASS doctor: five-tab Brief, private mood, renewal date, persistent PIN lock, unchanged medicines and logged review
+PASS demo-critical: zero runtime errors
+PASS 9:30 PM medicine slot: 1 taps, 0 typed fields, 0 PIN fields (budget 2)
+PASS prescribed fasting reading by hand from due Today card: 4 taps, 0 typed fields, 0 PIN fields (budget 4)
+PASS automatic meter reading: 0 taps, 0 typed fields, 0 PIN fields (budget 0)
+PASS caregiver status after launch login: 0 taps, 0 typed fields, 0 PIN fields (budget 0)
+PASS doctor renews Ramesh from Today: 3 taps, 0 typed fields, 1 PIN fields (budget 3)
+Friction: 0 failing journeys (all clicks counted; PIN is the sole typing exception)
+Owned preview stopped
+$ pnpm typecheck && pnpm test && pnpm build
+$ tsc --noEmit
+$ node tests/run.mjs
+PASS clock: Day 90 = 9 Oct 2026
+PASS safety: 52 fresh
+PASS safety: Meter LO
+PASS safety: 64 fresh
+PASS safety: Repeat low in 24h
+PASS safety: Stale 52 measured 7h ago
+PASS safety: High 320
+PASS safety: Two fasting readings under 80
+PASS safety: Normal 120
+PASS text: Hindi crisis
+PASS text: English first-person crisis
+PASS text: Female Hindi crisis
+PASS text: Female Hinglish crisis
+PASS text: Mosquito statement is not a crisis
+PASS text: Hinglish cardiac
+PASS text: No crisis for ordinary heat complaint
+PASS mood: PHQ-9 item 9 positive
+PASS mood: PHQ-9 total 12
+PASS mood: PHQ-2 total 2
+PASS sprint: Walk effect and consistency
+PASS sprint: Food effect computed from data
+PASS sprint: Insufficient A evenings
+PASS sprint: Effect below 15
+PASS privacy: CG-0001 → mood
+PASS privacy: CG-0001 → alerts
+PASS privacy: CG-0002 → medicines
+PASS privacy: LOCAL → readings
+PASS privacy: DR-0001 → mood
+PASS privacy: DR-0002 → readings
+PASS privacy: Sensitive upload hidden from uploader
+PASS privacy: Caregiver receives no forbidden records
+PASS privacy: Revocation takes immediate effect
+PASS privacy: Deleted patient inaccessible
+PASS cycle: Guarantee excludes −0.7 change
+PASS cycle: Guarantee for weak change with 8 checks
+PASS cycle: Sushma qualifies for Maintenance
+PASS cycle: No future follow-up lab at day 3
+PASS cycle: 13 weekly checks at day 90
+PASS cycle: Unverified lab excluded
+PASS rx: Unverified doctor blocked
+PASS rx: Audio chronic follow-up needs prior in-person
+PASS myth: Stop medicine claim
+PASS myth: Walk after dinner
+PASS myth: Cricket
+PASS myth: Unknown health claim
+PASS injector: Low notifies permitted caregivers
+PASS injector: Crisis excludes caregiver recipients
+PASS injector: Private crisis sends no alerts
+PASS injector: Offline low runs safety and queues SMS
+PASS injector: Offline contact sends on reconnect
+PASS injector: No recheck after 20 sim-minutes escalates
+PASS injector: Fresh normal recheck resolves low
+PASS injector: Time advance is idempotent
+PASS injector: Time travel preserves records but hides future
+PASS notify: Quiet hours blocks proactive nudge
+PASS notify: Safety bypasses quiet hours
+PASS metrics: Numerator cannot exceed denominator
+PASS metrics: Seeded cohort is deterministic
+PASS privacy: Weekly summary has no mood feeling
+PASS privacy: Caregiver alert projection excludes mood and clinic-only flags
+PASS offline: Remote caregiver cannot see an undelivered offline low
+PASS offline: Reconnection makes the low available to caregiver
+PASS privacy: Future family approval is hidden
+PASS rx: Negative medicine duration is blocked
+PASS sprint: Missed plan extends by at most two evenings
+PASS metrics: All clinics exist in each monthly cohort
+PASS migration: Version 3 preserves safety, consent and habit calculations
+PASS migration: All four medicine instructions migrate, including drafts
+PASS migration: Version 4 migration is idempotent
+PASS migration: Unsupported save version reseeds
+PASS session: Legacy tab login keeps role while dropping language
+PASS migration: Unlisted legacy text stays available in export but is not displayed
+PASS migration: Archived symptoms still trigger the original low-sugar rule
+PASS migration: Existing version 4 saves also normalize unknown old text
+PASS migration: Unknown prescription instructions require review rather than an invented translation
+PASS Health Connect: Permission sheet defaults all off
+PASS Health Connect: Extreme band SpO2 and HR never create alerts
+PASS Health Connect: Meter-sync 52 creates S1
+PASS Health Connect: Stale meter-sync uses device time and follows S0
+PASS Health Connect: Denied glucose and disconnected devices cannot ingest
+PASS Health Connect: Ramesh has 90 varied synthetic days, Sushma none
+PASS Health Connect: Sync imports only elapsed days and leaves three-day gap
+PASS Health Connect: Repeated sync does not duplicate meter readings
+PASS Health Connect: Disconnect stops importing; delete removes wellness history
+PASS Health Connect: Wellness consent remains off when sensor permissions are granted
+PASS Health Connect: Freshness becomes amber at 72 hours
+PASS Health Connect: Denied hydration and HR stay absent from imported data
+PASS Health Connect: Reconnecting after deletion imports permitted synthetic history
+PASS features: Only Ramesh has the seeded prescribed experiment
+PASS sources: One gentle notice per 72-hour sync outage
+PASS sources: Band has priority over manual walks; no hydration fallback
+PASS sources: Fresh typed low cannot be hidden by older meter data
+PASS plan: Off-plan low retains S1 safety
+PASS plan: Verified plan change replaces future reminders
+PASS plan: Unprescribed experiment absent on no-band patient
+PASS plan: Band and tap walks produce identical leading results
+PASS plan: Off-plan days do not enter testing denominator
+PASS calm: Several pills share one reminder and one taken action
+PASS calm: Snooze reuses the reminder; no missed-dose notification
+PASS calm: Older patient defaults large; choice survives normalization
+PASS plan: Walk experiment rejects steps outside dinner/check window
+PASS metrics: Impact leading metric derives from passive records
+PASS Health Connect: No-band patient gains demo series only after explicit consent and connection
+PASS sources: A sleep-only band leaves the one-tap walk fallback available
+PASS plan: Changing the plan preserves elapsed slots without retroactive off-plan penalties
+PASS caregiver: Only urgent permitted safety alerts push; weekly updates remain quiet after migration
+PASS sprint: Varied pre-dinner values preserve walking and kitchen effects
+
+107/107 checks passed
+$ vite build
+vite v8.0.5 building client environment for production...
+[2Ktransforming...✓ 1916 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                                     0.57 kB │ gzip:   0.37 kB
+dist/assets/noto-sans-greek-ext-400-normal-i2oSBwXz.woff2           4.87 kB
+dist/assets/noto-sans-greek-ext-700-normal-Dq1WA5-1.woff2           4.94 kB
+dist/assets/noto-sans-greek-ext-600-normal-B4z4a2vi.woff2           4.97 kB
+dist/assets/noto-sans-vietnamese-400-normal-D2wP-Vm-.woff2          5.31 kB
+dist/assets/noto-sans-vietnamese-700-normal-DayJ0F-f.woff2          5.70 kB
+dist/assets/noto-sans-vietnamese-600-normal-mhyQDSzg.woff2          5.83 kB
+dist/assets/ibm-plex-sans-vietnamese-400-normal-fK1oJ5dG.woff       6.39 kB
+dist/assets/noto-sans-greek-ext-400-normal-L11LEhi4.woff            6.43 kB
+dist/assets/noto-sans-greek-ext-700-normal-BOmIwFkq.woff            6.49 kB
+dist/assets/noto-sans-greek-ext-600-normal-BjvVOqxV.woff            6.50 kB
+dist/assets/ibm-plex-sans-vietnamese-600-normal-DgdngZtN.woff       6.58 kB
+dist/assets/noto-sans-cyrillic-400-normal-CHP_ranX.woff2            7.09 kB
+dist/assets/noto-sans-vietnamese-400-normal-C3Al4sv4.woff           7.12 kB
+dist/assets/noto-sans-cyrillic-700-normal-DYZmzPmX.woff2            7.28 kB
+dist/assets/noto-sans-cyrillic-600-normal-KpAl9xZA.woff2            7.36 kB
+dist/assets/noto-sans-vietnamese-600-normal-D0HZFEqa.woff           7.67 kB
+dist/assets/noto-sans-vietnamese-700-normal-1GL2JyGE.woff           7.70 kB
+dist/assets/noto-sans-greek-400-normal-DCESwnT1.woff2               7.88 kB
+dist/assets/noto-sans-greek-700-normal-x3kNWF-0.woff2               8.00 kB
+dist/assets/noto-sans-greek-600-normal-CT9U7UAD.woff2               8.02 kB
+dist/assets/ibm-plex-sans-vietnamese-400-normal-DG4YqDda.woff2      8.20 kB
+dist/assets/ibm-plex-sans-vietnamese-600-normal-DpPYBSTl.woff2      8.46 kB
+dist/assets/ibm-plex-sans-greek-400-normal-D9ESIMu3.woff            8.76 kB
+dist/assets/noto-sans-cyrillic-400-normal-BDYvNhAR.woff             8.99 kB
+dist/assets/noto-sans-cyrillic-700-normal-D8UNalU-.woff             9.13 kB
+dist/assets/ibm-plex-sans-greek-600-normal-D-CqTdkO.woff            9.22 kB
+dist/assets/noto-sans-cyrillic-600-normal-BRIw9PIU.woff             9.24 kB
+dist/assets/noto-sans-greek-400-normal-Be2BcUUc.woff                9.91 kB
+dist/assets/ibm-plex-sans-greek-400-normal-_efipK4i.woff2           9.94 kB
+dist/assets/noto-sans-greek-700-normal-DDNJsN3F.woff               10.05 kB
+dist/assets/noto-sans-greek-600-normal-C0bz_iEd.woff               10.06 kB
+dist/assets/ibm-plex-sans-cyrillic-ext-400-normal-Dsrv2Tcn.woff    10.28 kB
+dist/assets/ibm-plex-sans-greek-600-normal-DzTrcv_p.woff2          10.36 kB
+dist/assets/ibm-plex-sans-cyrillic-ext-600-normal-Bz0x94Yp.woff    10.61 kB
+dist/assets/ibm-plex-sans-cyrillic-ext-400-normal-g30qAdWV.woff2   12.14 kB
+dist/assets/ibm-plex-sans-cyrillic-ext-600-normal-DUMzJB7m.woff2   12.30 kB
+dist/assets/noto-sans-latin-400-normal-BTkUljjl.woff2              13.12 kB
+dist/assets/noto-sans-latin-700-normal-CrvTEWhy.woff2              13.46 kB
+dist/assets/noto-sans-latin-600-normal-Dkgu5AE5.woff2              13.49 kB
+dist/assets/ibm-plex-sans-cyrillic-400-normal-BTotfTJu.woff        13.51 kB
+dist/assets/ibm-plex-sans-cyrillic-600-normal-BGq0mW3O.woff        13.88 kB
+dist/assets/ibm-plex-sans-latin-ext-400-normal-RBey6euL.woff       14.36 kB
+dist/assets/ibm-plex-sans-latin-ext-600-normal-DIrixKbi.woff       14.77 kB
+dist/assets/ibm-plex-sans-cyrillic-400-normal-DZqxrq2p.woff2       14.80 kB
+dist/assets/ibm-plex-sans-cyrillic-600-normal-71GNu3SW.woff2       15.04 kB
+dist/assets/ibm-plex-sans-latin-ext-400-normal-C5H60-Va.woff2      15.98 kB
+dist/assets/ibm-plex-sans-latin-ext-600-normal-DOrvGEcy.woff2      16.44 kB
+dist/assets/noto-sans-latin-400-normal-DPpKfCgK.woff               16.68 kB
+dist/assets/noto-sans-latin-700-normal-ZyrKABVF.woff               16.95 kB
+dist/assets/noto-sans-latin-600-normal-DVJMj_t0.woff               17.10 kB
+dist/assets/ibm-plex-sans-latin-400-normal-CYLoc0-x.woff           22.10 kB
+dist/assets/noto-sans-cyrillic-ext-400-normal-BjDhGU6t.woff2       22.22 kB
+dist/assets/noto-sans-cyrillic-ext-700-normal-OK-fZO_i.woff2       22.26 kB
+dist/assets/ibm-plex-sans-latin-400-normal-CDDApCn2.woff2          22.58 kB
+dist/assets/noto-sans-cyrillic-ext-600-normal-DlWr7wnj.woff2       23.03 kB
+dist/assets/ibm-plex-sans-latin-600-normal-Cu4Hd6ag.woff           23.87 kB
+dist/assets/ibm-plex-sans-latin-600-normal-CuJfVYMP.woff2          24.25 kB
+dist/assets/noto-sans-cyrillic-ext-700-normal-D83T7awq.woff        28.41 kB
+dist/assets/noto-sans-cyrillic-ext-400-normal-d9FrwbiD.woff        28.68 kB
+dist/assets/noto-sans-cyrillic-ext-600-normal-Cwz1867h.woff        29.36 kB
+dist/assets/noto-sans-devanagari-400-normal-C3FccbrF.woff2         42.67 kB
+dist/assets/noto-sans-devanagari-600-normal-Ewgvvq1j.woff2         45.73 kB
+dist/assets/noto-sans-devanagari-700-normal-DVs0dmkg.woff2         45.83 kB
+dist/assets/noto-sans-latin-ext-400-normal-CVf-LbaS.woff2          55.64 kB
+dist/assets/noto-sans-devanagari-400-normal-g9fsM2jL.woff          58.86 kB
+dist/assets/noto-sans-latin-ext-700-normal-BypTtJma.woff2          59.14 kB
+dist/assets/noto-sans-latin-ext-600-normal-Has_8ph9.woff2          60.20 kB
+dist/assets/noto-sans-devanagari-700-normal-CT12sGlc.woff          61.37 kB
+dist/assets/noto-sans-devanagari-600-normal-Bly84zfI.woff          61.38 kB
+dist/assets/noto-sans-latin-ext-400-normal-CNh9dRW_.woff           78.44 kB
+dist/assets/noto-sans-latin-ext-700-normal-CgsG9aVh.woff           82.42 kB
+dist/assets/noto-sans-latin-ext-600-normal-B3lLaxXr.woff           83.25 kB
+dist/assets/index-DsXFFfhf.css                                    127.68 kB │ gzip:  24.04 kB
+dist/assets/index-6z8G_4ZL.js                                     409.21 kB │ gzip: 127.57 kB
+
+✓ built in 843ms
+$ node qa/no-devanagari.mjs
+No Devanagari outside the allowlist

@@ -35,16 +35,16 @@ pnpm build
 
 ## Four-minute presentation
 
-1. Open **DEMO → Reset demo → Confirm**. Select **Ramesh**.
-2. Open **Sugar Detective** from the menu. Choose the walking experiment in History: six evenings yield a computed **31 mg/dL** lower post-dinner rise.
-3. **DEMO → Low 52**, then switch to **Amit**. Show the alert, simulated local-contact notification and acknowledgement. Switch to **Neha** to show shared ownership and her restricted medicines access.
-4. Return to **Ramesh → Log glucose** and save a fresh **100 mg/dL** recheck; the low alert resolves.
-5. **Doctor → message**: enter the synthetic phrase `I don't feel like living anymore`. It opens private support and creates a care-team callback item. Switch to **Pooja** to show the queue. Caregivers receive no mood notification.
-6. Switch to **Dr. Verma**: open the patient profile, Health Map and prescription composer. The demo signing PIN is **246810**. Sign, then return to Ramesh to confirm the new reminder schedule.
-7. Open Ramesh's Day-90 Proof Card, switch to **Amit → Payments**, and approve the **mock UPI** renewal. No money moves.
-8. **Pooja → Impact**: change the clinic and cohort filters. Show **DEMO → Self-test**.
+1. Ramesh Today.
+2. Meter sync 52 opens the safety screen.
+3. Amit's urgent Home: “I've spoken to him”.
+4. Ramesh logs a fresh 100; the low alert resolves.
+5. Dr. Verma Today: Open Ramesh's Brief.
+6. Renew same; review today's prescription and sign with PIN **246810**.
+7. Ramesh confirms new medicine reminders, then views the Proof Card.
+8. Pooja Impact.
 
-The guided mode supplies 14 navigation steps with Next/Back. Actions such as typing a message, injecting a reading, signing and approving UPI are performed by the presenter.
+Guided mode follows these eight steps. It injects the two synthetic glucose examples; acknowledgement, signing and reminder confirmation remain real presenter actions. Next requires a signed renewal before proceeding and confirmed reminders before showing Proof.
 
 ## Demo controls and accounts
 
@@ -87,15 +87,15 @@ QA now waits for its own preview process, verifies its response against `dist/in
 
 ## Minimal navigation checkpoint
 
-`src/app/routes.ts` owns role navigation, grouped drawers, hidden destinations, redirects, demo scenarios and the 14-step guide. Run `node qa/sync-routes.mjs` after changing visible destinations; the sweep rejects a stale `qa/routes.json`.
+`src/app/routes.ts` owns role navigation, grouped drawers, hidden destinations, redirects, demo scenarios and the 8-step guide. Run `node qa/sync-routes.mjs` after changing visible destinations; the sweep rejects a stale `qa/routes.json`.
 
 Patient: Today, Progress, Records, Doctor, with a floating + Log. Family & privacy combines sharing, consent and data rights. Doctor contains Messages, Appointments and Tests. Settings includes the band connection. Progress includes the Day-90 proof section and connected band data.
 
-Caregiver: Home, Alerts, Notes, Payments. Switch family member opens a sheet; Add a report lives in Notes and retains sensitive-document restrictions. Doctor: Today, Patients, Messages, Appointments; the same navigation becomes a sidebar at 900px. Patient profiles have six tabs, with separately consented mood inside Overview. Team: Care desk, Myth review, Impact; the desk contains Queue, Case review and Messages sent.
+Caregiver: Home, Updates, Payments (payer only). Switch family member opens a sheet; Add a report lives in Notes and retains sensitive-document restrictions. Doctor: Today, Patients, Messages, Appointments; the same navigation becomes a sidebar at 900px. Patient profiles have five tabs: Brief, Charts, Records, Prescriptions, Messages. Health map opens from Records; Brief mood requires separate consent. Team: Care desk, Myth review, Impact; the desk contains Queue, Case review and Messages sent.
 
 Legacy hash links redirect to their canonical destination, preserving query parameters. These are screen merges; existing actions and safety/consent checks remain available. Launch offers three role cards, four quick demo identities and fixed emergency phone links. Demo controls expose six identities and twelve scenarios; each scenario switches identity and opens its effect.
 
-Run the additional Playwright checks with `node qa/run-all.mjs ia`. They cover legacy redirects, merged screens, consented mood visibility, mobile/desktop doctor navigation, all twelve scenarios and all fourteen guided steps with console-error checks. Use the same Chromium and port variables described above. Results are in `qa/ia-checks.txt` and `qa/ia-sweep.txt`.
+Run the additional Playwright checks with `node qa/run-all.mjs ia`. They cover legacy redirects, merged screens, consented mood visibility, mobile/desktop doctor navigation, all twelve scenarios and all eight guided steps with console-error checks. Use the same Chromium and port variables described above. Results are in `qa/ia-checks.txt` and `qa/ia-sweep.txt`.
 
 ## Friction and Health Connect iteration
 
@@ -125,3 +125,5 @@ Testing plans contain weekday/slot schedules and optionally a signed six-evening
 Today leads with a bundled medicine slot or the due prescribed check, followed by automatic Your day and a progress link. Each medicine slot has one reminder, Taken/Taken all and Snooze 30 min. Missed records remain for adherence, with a gentle next-morning line and no missed-dose notification. Refill appears only at seven stock days or fewer. + Log is in the Today header to avoid covering the summary; elsewhere it remains floating. Photo entry is first, the keypad second; plan context is prefilled, and ownership is asked only for a large change or an away plan. The optional Sunday feeling and fortnightly private mood offer sit below the fold. Progress has three cards, with band details behind a link. Patients aged 55+ start with extra-large text and can change it.
 
 Run `node qa/run-all.mjs calm` for the 412×915 morning/evening layouts, no-band path, prescribed experiment visibility and single outage notice. `qa/calm-gates.txt` records all final gates; `qa/patient-today-412x915.png` and `qa/patient-morning-412x915.png` show the two primary states. `qa/baseline.txt` and `qa/friction-baseline.txt` remain immutable before records.
+
+Caregiver Home shows shared family status, with urgent alerts taking the whole screen. Routine Updates never push. Doctor Today shows appointments and at most five review items; Reviewed records the clinician action without resolving the safety event. Renew same previews today’s date and uses the unchanged validation and PIN lock. Every patient screen offers fixed Help phone links. QA: `node qa/run-all.mjs demo-critical ia friction` checks these flows.

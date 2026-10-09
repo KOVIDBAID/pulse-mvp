@@ -20,6 +20,7 @@ if (
         "friction",
         "health-connect",
         "calm",
+        "demo-critical",
       ].includes(name),
   )
 )

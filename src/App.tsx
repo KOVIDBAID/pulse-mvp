@@ -21,6 +21,8 @@ import {
   Menu,
   MessageCircle,
   Pill,
+  Phone,
+  CreditCard,
   Plus,
   ShieldCheck,
   Users,
@@ -206,11 +208,91 @@ function Shell({ children, title }: { children: ReactNode; title: string }) {
   const config = ROUTES[role];
   const [drawer, setDrawer] = useState(false);
   const [switcher, setSwitcher] = useState(false);
+  const [help, setHelp] = useState(false);
+  const drawerRef = useRef<HTMLElement>(null);
+  const [wide, setWide] = useState(
+    () => window.matchMedia("(min-width: 900px)").matches,
+  );
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 900px)");
+    const change = () => setWide(media.matches);
+    media.addEventListener("change", change);
+    return () => media.removeEventListener("change", change);
+  }, []);
+  useEffect(() => {
+    setDrawer(false);
+    setHelp(false);
+  }, [route]);
+  useEffect(() => {
+    if (drawer)
+      drawerRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+    const escape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setDrawer(false);
+        setHelp(false);
+      }
+    };
+    document.addEventListener("keydown", escape);
+    return () => document.removeEventListener("keydown", escape);
+  }, [drawer, help]);
+  const pathname = route.split("?")[0],
+    page = pathname.split("/")[2];
+  const caregiverPayer =
+    role === "caregiver"
+      ? s.patients.find(
+          (member) =>
+            member.payerId === s.session.userId &&
+            E.connected(s, s.session.userId, member.id),
+        )
+      : undefined;
+  const navPaths = config.nav
+    .filter(
+      (item) =>
+        role !== "caregiver" || item.path !== "billing" || caregiverPayer,
+    )
+    .map((item) => `/${role}/${item.path}`);
+  const activePath = navPaths.includes(pathname)
+    ? page
+    : role === "doctor" && page === "patient"
+      ? "patients"
+      : role === "caregiver" && page === "alerts"
+        ? "home"
+        : role === "caregiver" && page === "notifications"
+          ? "updates"
+          : config.nav[0].path;
+  const root = navPaths.includes(pathname);
+  const back = () => {
+    if (history.state?.pulseInternal) history.back();
+    else
+      go(
+        role === "doctor" && page === "patient"
+          ? `/doctor/patient/${pathname.split("/")[3]}/overview` === pathname
+            ? "/doctor/patients"
+            : `/doctor/patient/${pathname.split("/")[3]}/overview`
+          : `/${role}/${config.nav[0].path}`,
+      );
+  };
+  const icons: Record<string, typeof Home> = {
+    home: Home,
+    progress: Activity,
+    records: FileText,
+    doctor: HeartHandshake,
+    updates: Bell,
+    billing: CreditCard,
+    patients: Users,
+    messages: MessageCircle,
+    appointments: CalendarDays,
+    desk: ShieldCheck,
+  };
   const p = E.patient(s);
   const unread = s.notifications.filter(
     (n) =>
       n.audience === s.session.userId &&
       E.visible(n, s) &&
+      (role !== "caregiver" ||
+        E.allow(s, s.session.userId, n.patientId, n.category) ||
+        (n.category === "billing" &&
+          E.patient(s, n.patientId)?.payerId === s.session.userId)) &&
       n.status !== "queued" &&
       !n.archived &&
       (!n.snoozedUntil || n.snoozedUntil <= E.now(s)) &&
@@ -226,7 +308,18 @@ function Shell({ children, title }: { children: ReactNode; title: string }) {
   const select = (item: { path: string; action?: string }) => {
     setDrawer(false);
     if (item.action === "switch") setSwitcher(true);
-    else go(`/${role}/${item.path}`);
+    else {
+      if (
+        role === "caregiver" &&
+        item.path === "billing" &&
+        caregiverPayer &&
+        p?.payerId !== s.session.userId
+      )
+        mutate((s) => {
+          s.session.patientId = caregiverPayer.id;
+        });
+      go(`/${role}/${item.path}`);
+    }
   };
   const closeSwitcher = () => {
     setSwitcher(false);
@@ -239,40 +332,33 @@ function Shell({ children, title }: { children: ReactNode; title: string }) {
         {children}
       </section>
     );
-  const nav = (
+  const nav = (surface: "side" | "bottom") => (
     <>
       {config.nav
         .filter(
           (item) =>
-            role !== "caregiver" ||
-            item.path !== "billing" ||
-            p?.payerId === s.session.userId,
+            role !== "caregiver" || item.path !== "billing" || !!caregiverPayer,
         )
-        .map((item, i) => (
-          <button
-            key={item.path}
-            aria-current={
-              route.split("?")[0] === `/${role}/${item.path}`
-                ? "page"
-                : undefined
-            }
-            onClick={() => select(item)}
-            className={
-              route.split("?")[0] === `/${role}/${item.path}` ? "active" : ""
-            }
-          >
-            {i === 0 ? (
-              <Home size={20} />
-            ) : i === 1 ? (
-              <Activity size={20} />
-            ) : i === 2 ? (
-              <FileText size={20} />
-            ) : (
-              <MessageCircle size={20} />
-            )}
-            <span>{item.label}</span>
-          </button>
-        ))}
+        .map((item) => {
+          const Icon = icons[item.path] || FileText;
+          const visible =
+            role === "patient" || role === "caregiver"
+              ? surface === "bottom"
+              : (surface === "side") === wide;
+          return (
+            <button
+              key={item.path}
+              aria-current={
+                visible && activePath === item.path ? "page" : undefined
+              }
+              className={activePath === item.path ? "active" : ""}
+              onClick={() => select(item)}
+            >
+              <Icon size={20} />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
     </>
   );
   const groups = (
@@ -324,14 +410,17 @@ function Shell({ children, title }: { children: ReactNode; title: string }) {
       {(role === "doctor" || role === "team") && (
         <aside className="m-sidebar">
           <div className="m-brand">Pulse</div>
-          {nav}
+          {nav("side")}
           {groups}
         </aside>
       )}
       <div className="m-main">
         <header className="m-top">
-          <button aria-label="Open menu" onClick={() => setDrawer(true)}>
-            <Menu />
+          <button
+            aria-label={root ? "Open menu" : "Back"}
+            onClick={() => (root ? setDrawer(true) : back())}
+          >
+            {root ? <Menu /> : <ArrowLeft />}
           </button>
           <div>
             <b>{title}</b>
@@ -347,12 +436,18 @@ function Shell({ children, title }: { children: ReactNode; title: string }) {
                 + Log
               </button>
             )}
+          {role === "patient" && (
+            <button className="patient-help" onClick={() => setHelp(true)}>
+              <Phone size={18} />
+              Help
+            </button>
+          )}
           <button
             aria-label="Notifications"
             onClick={() => go(`/${role}/notifications`)}
           >
             <Bell size={20} />
-            <span>{unread || ""}</span>
+            {unread > 0 && <span>{unread}</span>}
           </button>
         </header>
         {!s.sim.online && (
@@ -373,18 +468,66 @@ function Shell({ children, title }: { children: ReactNode; title: string }) {
               {config.floating.label}
             </button>
           )}
-        {role !== "team" && (
+        {
           <nav
-            className={`m-bottom ${role === "doctor" ? "doctor-bottom" : ""}`}
+            className={`m-bottom ${role === "doctor" || role === "team" ? "doctor-bottom" : ""}`}
             aria-label="Main navigation"
           >
-            {nav}
+            {nav("bottom")}
           </nav>
-        )}
+        }
       </div>
+      {help && (
+        <div className="m-overlay" onClick={() => setHelp(false)}>
+          <section
+            className="m-confirm-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Help now"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              autoFocus
+              className="close"
+              aria-label="Close help"
+              onClick={() => setHelp(false)}
+            >
+              <X />
+            </button>
+            <h2>Help now</h2>
+            <a className="m-btn danger" href="tel:112">
+              Call 112
+            </a>
+            <a className="m-btn secondary" href="tel:14416">
+              Call Tele-MANAS 14416 (24×7, free)
+            </a>
+            <a
+              className="m-btn secondary"
+              href={`tel:${E.safetyContact(s).phone}`}
+            >
+              Call {E.safetyContact(s).name}
+            </a>
+            <Btn
+              onClick={() => {
+                setHelp(false);
+                go("/patient/safety");
+              }}
+            >
+              Open safety steps
+            </Btn>
+          </section>
+        </div>
+      )}
       {drawer && (
         <div className="m-overlay" onClick={() => setDrawer(false)}>
-          <aside className="m-drawer" onClick={(e) => e.stopPropagation()}>
+          <aside
+            ref={drawerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu"
+            className="m-drawer"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               className="close"
               aria-label="Close menu"
@@ -568,7 +711,7 @@ function Safety({ rule, onBack }: { rule?: string; onBack?: () => void }) {
       }
     >
       <Badge tone={low || emergency ? "urgent" : ""}>
-        {code} · {a?.value ?? ""} {a?.value ? "mg/dL" : ""}
+        {E.ruleLabel(code)} · {a?.value ?? ""} {a?.value ? "mg/dL" : ""}
       </Badge>
       {a?.value && (
         <SourceBadge row={s.readings.find((r) => r.id === a.source)} />
@@ -663,15 +806,13 @@ function Safety({ rule, onBack }: { rule?: string; onBack?: () => void }) {
       {a && (
         <>
           <p>
-            {a.status} · {a.owner} ·{" "}
-            {s.sim.online
-              ? "Demo notifications recorded"
-              : "Contact messages waiting for connection"}
+            {a.owner === "Unassigned" ? "Awaiting care-team response" : a.owner}{" "}
+            {!s.sim.online && " · Contact messages waiting for connection"}
           </p>
           <ul className="timeline">
             {a.timeline.map((t: any, i: number) => (
               <li key={i}>
-                {E.date(t.day)} {t.time} · {t.text}
+                {E.date(t.day)} {t.time} · {E.displayText(t.text)}
               </li>
             ))}
           </ul>
@@ -1412,8 +1553,7 @@ function Log({
             />
           )}
           <p className={`m-hint ${inline ? "inline-hidden" : ""}`}>
-            No future measurement time. Older than 30 minutes follows the
-            stale-reading path.
+            Use the time shown on your meter.
           </p>
           <Btn disabled={!valid || !confirmed} onClick={save}>
             Save reading
@@ -2045,7 +2185,7 @@ function Mood() {
   const [saved, setSaved] = useState(false);
   const p = E.patient(s);
   return (
-    <Shell title="Private mood check">
+    <Shell title="Mood check — private">
       <Card title="Only you · care team with your consent" privateCard>
         {!p.consents.mood ? (
           <>
@@ -2164,7 +2304,7 @@ function Progress() {
     : null;
   const [details, setDetails] = useState(false);
   return (
-    <Shell title="Your progress">
+    <Shell title="Progress">
       <Card title="Your sugar">
         {weeks.length ? (
           <>
@@ -2277,7 +2417,7 @@ function Records({ initialUpload = false }: { initialUpload?: boolean } = {}) {
     ? E.view(s, user, pid, "medicines", s.prescriptions)
     : s.prescriptions.filter((r) => r.patientId === pid && E.visible(r, s));
   return (
-    <Shell title="Records & prescriptions">
+    <Shell title="Records">
       {preview && (
         <RxPreview
           rx={preview}
@@ -2942,7 +3082,7 @@ function Billing({ proofOnly = false }: { proofOnly?: boolean }) {
     );
   };
   return (
-    <Shell title={proofOnly ? "Day-90 Proof Card" : "Payments & billing"}>
+    <Shell title={proofOnly ? "Day-90 Proof Card" : "Payments"}>
       <Card title="Measured change in HbA1c">
         {pr.ready ? (
           <>
@@ -3075,7 +3215,7 @@ function Myth() {
   const [result, setResult] = useState("");
   const pid = s.session.patientId;
   return (
-    <Shell title="True or false? · Myth buster">
+    <Shell title="True or false?">
       <Card title="Check a health claim">
         <textarea
           aria-label="Claim to check"
@@ -3187,7 +3327,9 @@ function Notifications() {
       !n.archived &&
       (!n.snoozedUntil || n.snoozedUntil <= E.now(s)) &&
       (s.session.role !== "caregiver" ||
-        E.allow(s, user, n.patientId, n.category)),
+        E.allow(s, user, n.patientId, n.category) ||
+        (n.category === "billing" &&
+          E.patient(s, n.patientId)?.payerId === user)),
   );
   const filtered = list
     .filter((n) => filter === "all" || n.category === filter)
@@ -3240,9 +3382,9 @@ function Notifications() {
               <Bell size={20} />
               <div>
                 <b>
-                  {n.title} {!n.read && "●"}
+                  {E.displayText(n.title)} {!n.read && "●"}
                 </b>
-                <p>{n.body}</p>
+                <p>{E.displayText(n.body)}</p>
                 <small>
                   {E.date(n.day)} {n.time}
                 </small>
@@ -3286,6 +3428,8 @@ function Caregiver({ alertsOnly = false }: { alertsOnly?: boolean } = {}) {
     (l) =>
       l.viewer === user &&
       l.status === "approved" &&
+      E.visible(l, s) &&
+      E.connected(s, user, l.patientId) &&
       E.patient(s, l.patientId) &&
       !E.patient(s, l.patientId).deleted,
   );
@@ -3315,12 +3459,15 @@ function Caregiver({ alertsOnly = false }: { alertsOnly?: boolean } = {}) {
           >
             <SourceBadge row={s.readings.find((r) => r.id === a.source)} />
             <p>
-              {a.value ?? ""} {a.value ? "mg/dL" : ""} · {a.status} · {a.owner}
+              {a.value ?? ""} {a.value ? "mg/dL" : ""} ·{" "}
+              {a.owner === "Unassigned"
+                ? "Awaiting care-team response"
+                : a.owner}
             </p>
             <ul className="timeline">
               {a.timeline.map((t: any, i: number) => (
                 <li key={i}>
-                  {t.time} · {t.text}
+                  {t.time} · {E.displayText(t.text)}
                 </li>
               ))}
             </ul>
@@ -3406,7 +3553,7 @@ function Caregiver({ alertsOnly = false }: { alertsOnly?: boolean } = {}) {
           : "",
         tests ? `tests ${tests.done} of ${tests.due}` : "",
         wellness
-          ? `walks ${wellness.walks} evenings · From band · wellness only`
+          ? `walks ${wellness.walks} evenings · ${wellness.source === "band" ? "From band · wellness only" : "You"}`
           : "",
       ]
         .filter(Boolean)
@@ -3425,7 +3572,9 @@ function Caregiver({ alertsOnly = false }: { alertsOnly?: boolean } = {}) {
             key={member.id}
             title={`${member.id === E.P ? "Papa" : member.name.split(" ")[0]} · ${["Steady", "Needs attention", "Urgent"][rank]}`}
           >
-            <Badge tone={rank === 2 ? "urgent" : rank === 1 ? "amber" : ""}>
+            <Badge
+              tone={rank === 2 ? "urgent" : rank === 1 ? "amber" : "steady"}
+            >
               {rank === 2 ? "⚠" : rank === 1 ? "!" : "✓"}{" "}
               {["Steady", "Needs attention", "Urgent"][rank]}
             </Badge>
@@ -3460,7 +3609,7 @@ function Connect() {
   const [name, setName] = useState("Vikas, nephew");
   const [sent, setSent] = useState(false);
   return (
-    <Shell title="Connect family">
+    <Shell title="Connect a family member">
       <Card title="Request access">
         <p>
           The patient must approve on their own phone. Mood, private notes and
@@ -3539,7 +3688,7 @@ function Messages() {
       )
     : [];
   return (
-    <Shell title="Doctor messages">
+    <Shell title="Messages">
       <Card title="Dr. Anjali Verma · MD (Medicine)">
         <Badge>Verified · UPMC/DEMO/48213</Badge>
         <p>
@@ -3933,7 +4082,7 @@ function DoctorHome() {
                 ? E.proof(s, a.patientId)
                 : null;
               return (
-                <div className="m-row" key={a.id}>
+                <div className="m-row" data-review-id={a.id} key={a.id}>
                   <div>
                     <b>
                       {a.slot} · {E.patient(s, a.patientId).name}
@@ -3954,11 +4103,26 @@ function DoctorHome() {
           </Card>
           <Card title="Needs your review">
             {reviews.map((a) => (
-              <div className="m-row" key={a.id}>
+              <div className="m-row" data-review-id={a.id} key={a.id}>
                 <div>
                   <b>{E.patient(s, a.patientId).name}</b>
                   <small>
-                    {E.ruleLabel(a.rule || "W3")}
+                    {a.rule === "S4"
+                      ? `fasting below 80 on 2 days (${s.readings
+                          .filter(
+                            (r) =>
+                              r.patientId === a.patientId &&
+                              r.context === "fasting" &&
+                              r.value < 80 &&
+                              r.day >= a.day - 6 &&
+                              r.day <= a.day,
+                          )
+                          .slice(-2)
+                          .map((r) => r.value)
+                          .join(
+                            ", ",
+                          )})${E.activeRx(s, a.patientId)?.medicines.some((m: any) => m.generic.toLowerCase() === "glimepiride") ? " on glimepiride" : ""}`
+                      : E.ruleLabel(a.rule || "W3")}
                     {a.value ? ` · ${a.value} mg/dL` : ""} · for your review
                   </small>
                 </div>
@@ -4038,7 +4202,7 @@ function Registry() {
     );
   }, [query, filter, current, size]);
   return (
-    <Shell title="Patient registry">
+    <Shell title="Patients">
       <Card>
         <Field
           label="Search name or Pulse ID"
@@ -4048,17 +4212,6 @@ function Registry() {
             setPage(1);
           }}
         />
-        {query.toLowerCase() === "rmesh" && (
-          <Btn
-            secondary
-            onClick={() => {
-              setQuery("Ramesh");
-              setPage(1);
-            }}
-          >
-            Did you mean Ramesh?
-          </Btn>
-        )}
         <div className="m-grid">
           <Select
             label="Filter"
@@ -4118,12 +4271,34 @@ function Registry() {
             <ChevronRight size={18} />
           </button>
         ))}
-        {!list.length && (
-          <Empty>
-            No patients match. Patient consent and doctor verification are
-            required.
-          </Empty>
-        )}
+        {!list.length &&
+          (s.patients.some(
+            (p) =>
+              (normalize(p.name).includes(normalize(query)) ||
+                p.id.toLowerCase().includes(query.toLowerCase())) &&
+              !E.allow(s, s.session.userId, p.id, "readings"),
+          ) ? (
+            <Empty>
+              Patient consent and doctor verification are required to show these
+              results.
+            </Empty>
+          ) : query ? (
+            <div>
+              <p>No patient matches '{query}'. Did you mean Ramesh Kumar?</p>
+              <Btn
+                secondary
+                onClick={() => {
+                  setQuery("Ramesh Kumar");
+                  setFilter("all");
+                  setPage(1);
+                }}
+              >
+                Show
+              </Btn>
+            </div>
+          ) : (
+            <Empty>No patients match this filter.</Empty>
+          ))}
         <div className="m-actions">
           <Btn secondary disabled={current === 1} onClick={() => setPage(1)}>
             First
@@ -4479,7 +4654,7 @@ function DoctorPatient() {
               </Card>
             </>
           ) : tab === "map" ? (
-            <Card title="Health Map · deterministic graph">
+            <Card title="Health map">
               <svg
                 viewBox="0 0 640 400"
                 role="img"
@@ -5119,7 +5294,9 @@ function Rx() {
                     ...E.stamp(s),
                     medicines: draft.medicines.map((m: any) => ({
                       ...m,
-                      times: E.patternTimes(m.pattern),
+                      times: renew
+                        ? m.times || E.patternTimes(m.pattern)
+                        : E.patternTimes(m.pattern),
                     })),
                     signed: true,
                     version,
@@ -5341,7 +5518,7 @@ function Desk() {
               }}
             >
               <b>
-                {r.priority} · {r.rule}
+                {E.ruleLabel(r.priority)} · {E.ruleLabel(r.rule)}
               </b>
               <span>
                 {E.patient(s, r.patientId).name}
@@ -5357,11 +5534,13 @@ function Desk() {
         </Card>
         {a && (
           <Card
-            title={`${a.priority} · ${a.rule} · ${E.patient(s, a.patientId).name}`}
+            title={`${E.ruleLabel(a.priority)} · ${E.ruleLabel(a.rule)} · ${E.patient(s, a.patientId).name}`}
             privateCard={a.private}
           >
             <Badge>
-              {a.status} · {a.owner}
+              {a.owner === "Unassigned"
+                ? "Awaiting care-team response"
+                : a.owner}
             </Badge>
             <p>
               {staffed
@@ -5452,7 +5631,7 @@ function Desk() {
             <ul className="timeline">
               {a.timeline.map((t: any, i: number) => (
                 <li key={i}>
-                  {t.time} · {t.text}
+                  {t.time} · {E.displayText(t.text)}
                 </li>
               ))}
             </ul>
@@ -5563,7 +5742,38 @@ function Impact() {
   const doctor = s.session.role === "doctor";
   return (
     <Shell title={doctor ? "Practice outcomes" : "Impact console"}>
-      {doctor && <div className="m-grid"><Card title="Linked patients"><strong className="big-number">{s.patients.filter(p => E.allow(s,s.session.userId,p.id,"readings")).length}</strong></Card><Card title="Needs review"><strong className="big-number">{s.alerts.filter(a => E.visible(a,s) && a.delivery !== "queued" && a.status !== "resolved" && !a.reviewedBy && E.allow(s,s.session.userId,a.patientId,a.private ? "mood" : "readings")).length}</strong></Card></div>}
+      {doctor && (
+        <div className="m-grid">
+          <Card title="Linked patients">
+            <strong className="big-number">
+              {
+                s.patients.filter((p) =>
+                  E.allow(s, s.session.userId, p.id, "readings"),
+                ).length
+              }
+            </strong>
+          </Card>
+          <Card title="Needs review">
+            <strong className="big-number">
+              {
+                s.alerts.filter(
+                  (a) =>
+                    E.visible(a, s) &&
+                    a.delivery !== "queued" &&
+                    a.status !== "resolved" &&
+                    !a.reviewedBy &&
+                    E.allow(
+                      s,
+                      s.session.userId,
+                      a.patientId,
+                      a.private ? "mood" : "readings",
+                    ),
+                ).length
+              }
+            </strong>
+          </Card>
+        </div>
+      )}
       <Card title="Week-3 passive habit metric · Demo">
         {s.patients.slice(0, 2).map((p) => (
           <p key={p.id}>
@@ -6176,7 +6386,7 @@ function Utility({ kind }: { kind?: string } = {}) {
     );
   if (page === "permissions")
     return (
-      <Shell title="Shared permissions">
+      <Shell title="What's shared with me">
         <Card title="Patient-controlled categories">
           {E.categories.map((c) => (
             <p key={c}>
@@ -6208,7 +6418,7 @@ function Utility({ kind }: { kind?: string } = {}) {
   if (page === "care") return <Caregiver />;
   if (page === "settings" || page === "profile")
     return (
-      <Shell title="Profile & settings">
+      <Shell title="Settings">
         <Card title={role === "patient" ? "Patient profile" : "Demo account"}>
           {role === "patient" ? (
             <>
@@ -6272,7 +6482,7 @@ function Utility({ kind }: { kind?: string } = {}) {
       </Shell>
     );
   return (
-    <Shell title="Help & support">
+    <Shell title="Help & complaints">
       <Card title="Support hours 08:00–22:00">
         <a className="m-btn" href="tel:9876500003">
           Call demo care team
@@ -6770,13 +6980,34 @@ function Auth({ role }: { role: E.Role }) {
 }
 const guide = GUIDE;
 function Demo() {
-  const { s, mutate, login, go, toast, askConfirm, askText } = useApp();
+  const { s, mutate, login, go, route, toast, askConfirm, askText } = useApp();
   const [open, setOpen] = useState(false);
+  const demoDrawerRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (open)
+      demoDrawerRef.current
+        ?.querySelector<HTMLButtonElement>("button")
+        ?.focus();
+    const escape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", escape);
+    return () => document.removeEventListener("keydown", escape);
+  }, [open]);
+  useEffect(() => {
+    setOpen(false);
+  }, [route]);
   const [guided, setGuided] = useState(false);
+  useEffect(() => {
+    document.body.classList.toggle("guided-demo", guided);
+    return () => document.body.classList.remove("guided-demo");
+  }, [guided]);
   const [index, setIndex] = useState(0);
+  const initialRxVersion = useRef(0);
   const [value, setValue] = useState("8.1");
   const step = (i: number) => {
     setIndex(i);
+    if (i === 0) initialRxVersion.current = E.activeRx(s, E.P)?.version || 0;
     const [_, role, path, day] = guide[i];
     mutate((s) => {
       s.session = {
@@ -6793,6 +7024,27 @@ function Demo() {
       };
       E.advance(s, day, "10:30");
       s.session.patientId = E.P;
+      if (i === 1) {
+        const permissions = HC.emptyPermissions();
+        permissions.bloodGlucose = true;
+        HC.connect(s, permissions, E.P);
+        HC.ingestMeter(
+          s,
+          {
+            id: E.uid("GUIDE-METER"),
+            value: 52,
+            context: "fasting",
+            measuredAt: E.now(s),
+          },
+          E.P,
+        );
+      }
+      if (i === 3)
+        E.recordReading(
+          s,
+          { value: 100, context: "any", source: "typed", measuredAt: E.now(s) },
+          E.P,
+        );
     });
     go(`/${role}/${path}`);
   };
@@ -6953,7 +7205,27 @@ function Demo() {
             </Btn>
             <Btn
               disabled={index === guide.length - 1}
-              onClick={() => step(index + 1)}
+              onClick={() => {
+                if (
+                  index === 5 &&
+                  (E.activeRx(s, E.P)?.version || 0) <= initialRxVersion.current
+                ) {
+                  toast("Sign the renewal with PIN 246810 first.");
+                  return;
+                }
+                if (
+                  index === 6 &&
+                  E.activeRx(s, E.P)?.remindersConfirmed === false
+                ) {
+                  toast("Confirm your new medicine reminders first.");
+                  return;
+                }
+                if (index === 6 && route !== "/patient/proof") {
+                  go("/patient/proof");
+                  return;
+                }
+                step(index + 1);
+              }}
             >
               Next
             </Btn>
@@ -6969,6 +7241,10 @@ function Demo() {
       {open && (
         <div className="m-overlay" onClick={() => setOpen(false)}>
           <aside
+            ref={demoDrawerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Demo controls"
             className="m-drawer demo-drawer"
             onClick={(e) => e.stopPropagation()}
           >
@@ -7124,11 +7400,11 @@ function TestsPage() {
       {tests.map((t, i) => (
         <div key={i} className={`test-row ${t.pass ? "pass" : "fail"}`}>
           <b>
-            {t.pass ? "✓" : "✕"} {t.group}: {t.name}
+            {t.pass ? "✓" : "✕"} {t.group}: {E.displayText(t.name)}
           </b>
           <small>
-            Expected: {JSON.stringify(t.expected)} · Actual:{" "}
-            {JSON.stringify(t.actual)}
+            Expected: {E.displayText(JSON.stringify(t.expected))} · Actual:{" "}
+            {E.displayText(JSON.stringify(t.actual))}
           </small>
         </div>
       ))}
@@ -7211,7 +7487,8 @@ export default function App() {
     const path = resolveRoute(input);
     if (path !== routeRef.current) setLoading(true);
     else setLoading(false);
-    location.hash = `#${path}`;
+    if (path !== routeRef.current)
+      history.pushState({ pulseInternal: true }, "", `#${path}`);
     setRoute(path);
     window.scrollTo(0, 0);
   };
@@ -7574,7 +7851,8 @@ export default function App() {
   else if (page === "billing" || page === "proof")
     content =
       role === "caregiver" &&
-      !E.allow(s, s.session.userId, s.session.patientId, "proof") ? (
+      (!E.allow(s, s.session.userId, s.session.patientId, "proof") ||
+        (page === "billing" && E.patient(s)?.payerId !== s.session.userId)) ? (
         <Shell title="Not shared">
           <Empty>Proof and billing are not shared with this caregiver.</Empty>
         </Shell>
