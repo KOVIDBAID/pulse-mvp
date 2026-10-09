@@ -6,9 +6,9 @@ try {
  await page.goto(base);await page.waitForTimeout(400);
  await page.evaluate(()=>sessionStorage.setItem('pulse-session-v1',JSON.stringify({role:'patient',userId:'PUL-KNP-0001',patientId:'PUL-KNP-0001'})));
  await page.reload();await page.goto(`${base}/#/patient/home`);
- await page.getByRole('heading',{name:'Today',exact:true}).waitFor();
+ await page.locator('.m-top b').filter({hasText:/^Today$/}).waitFor();
  await page.getByRole('button',{name:'Log',exact:true}).click();
- await page.getByRole('heading',{name:'Log an update',exact:true}).waitFor();
+ await page.locator('.m-top b').filter({hasText:/^Log an update$/}).waitFor();
  await page.goto(`${base}/#/dev/tests`);
  await page.getByText(/\d+\/\d+ passed/).waitFor();
  if(await page.locator('.test-row.fail').count()) throw new Error('In-app rule tests failed');

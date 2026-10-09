@@ -1,3 +1,12 @@
+export const HABITS = {
+  walk_after_dinner: "10-minute walk after dinner",
+  veg_dal_first: "Vegetables and dal first, roti last",
+  one_less_roti: "One less roti, one more bowl of dal",
+  early_dinner: "Dinner before 8:30 PM",
+} as const;
+export type HabitId = keyof typeof HABITS;
+export const habitLabel = (id: HabitId | null | undefined) =>
+  id ? HABITS[id] || "" : "";
 export type Role = "patient" | "caregiver" | "doctor" | "team";
 export type Row = {
   id: string;
@@ -17,7 +26,7 @@ export type Patient = {
   inPerson: number | null;
   insulin: boolean;
   deleted: boolean;
-  habit: string;
+  habitId: HabitId | null;
   consents: Record<string, boolean>;
   target: number;
   mobile: string;
@@ -29,7 +38,6 @@ export type State = {
     role: Role | null;
     userId: string;
     patientId: string;
-    lang: "hi" | "en";
   };
   patients: Patient[];
   links: Row[];
@@ -92,21 +100,21 @@ export const medicines = [
     generic: "Metformin",
     strength: "500 mg",
     pattern: "1-0-1",
-    instruction: "खाने के बाद",
+    instruction: "After food",
     times: ["08:30", "21:30"],
   },
   {
     generic: "Glimepiride",
     strength: "1 mg",
     pattern: "1-0-0",
-    instruction: "खाने से पहले",
+    instruction: "Before food",
     times: ["08:00"],
   },
   {
     generic: "Atorvastatin",
     strength: "10 mg",
     pattern: "0-0-1",
-    instruction: "रात को सोने से पहले",
+    instruction: "At bedtime",
     times: ["22:00"],
   },
 ];
@@ -132,11 +140,13 @@ export const minutes = (day: number, time: string) =>
   day * 1440 + Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
 export const now = (s: State) => minutes(s.sim.day, s.sim.time);
 export const visible = (r: Row, s: State) => minutes(r.day, r.time) <= now(s);
-export const date = (day: number, lang = "en") =>
-  new Date(Date.UTC(2026, 6, 11 + day)).toLocaleDateString(
-    lang === "hi" ? "hi-IN" : "en-IN",
-    { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" },
-  );
+export const date = (day: number) =>
+  new Date(Date.UTC(2026, 6, 11 + day)).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 export const timeAt = (n: number) => ({
   day: Math.floor(n / 1440),
   time:
@@ -157,6 +167,7 @@ export function safetyContact(s: State, pid = s.session.patientId) {
 }
 export function scanText(text: string) {
   const t = text.normalize("NFC").toLowerCase().replace(/\s+/g, " ");
+  // @allow-devanagari
   const crisis = [
     "आत्महत्या",
     "खुदकुशी",
@@ -179,6 +190,23 @@ export function scanText(text: string) {
     "end my life",
     "want to die",
     "self harm",
+    "जीना नहीं चाहती",
+    "जीना नहीं चाहते",
+    "मरना चाहते",
+    "मर जाना चाहता",
+    "मर जाना चाहती",
+    "marna chahti",
+    "marna chahte",
+    "jeena nahi chahta",
+    "jeena nahi chahti",
+    "don't want to live",
+    "dont want to live",
+    "don't feel like living",
+    "no reason to live",
+    "better off dead",
+    "hurt myself",
+    "harm myself",
+    "end it all",
   ];
   const cardiac = [
     "सीने में दर्द",
@@ -213,6 +241,7 @@ export function scanText(text: string) {
       "confusion",
     ].some((x) => t.includes(x)),
   };
+  // @end-allow-devanagari
 }
 export function glucoseRule(r: Row, history: Row[]) {
   const at = minutes(r.day, r.time);
@@ -638,6 +667,7 @@ export function validateRx(draft: any, doctor: any, p: Patient) {
     );
   return errors;
 }
+// @allow-devanagari
 export function mythMatch(text: string) {
   const t = text.toLowerCase();
   if (
@@ -655,6 +685,8 @@ export function mythMatch(text: string) {
   if (/cricket|football|weather/.test(t)) return "not_health";
   return "unverified";
 }
+// @end-allow-devanagari
+
 export function activeRx(s: State, pid: string) {
   return s.prescriptions
     .filter((r) => r.patientId === pid && visible(r, s) && r.signed)
@@ -792,7 +824,7 @@ export function advance(s: State, day: number, time: string) {
                 p.id,
                 "medicines",
                 "Medicine update",
-                "कोई बात नहीं · recorded as missed",
+                "No problem · recorded as missed",
                 `N-${id}`,
                 "medicines",
               );
@@ -885,9 +917,9 @@ export function sync(s: State) {
 }
 export function seed(): State {
   const s: State = {
-    version: 3,
+    version: 4,
     sim: { day: 90, time: "10:30", online: true, demoMode: true },
-    session: { role: null, userId: "", patientId: P, lang: "hi" },
+    session: { role: null, userId: "", patientId: P },
     patients: [],
     links: [],
     readings: [],
@@ -965,7 +997,7 @@ export function seed(): State {
       inPerson: 0,
       insulin: false,
       deleted: false,
-      habit: i === 1 ? "रात के खाने के बाद 10 मिनट टहलना" : "",
+      habitId: i === 1 ? "walk_after_dinner" : null,
       target: 7,
       mobile: i === 1 ? "9876543210" : `987654${String(i).padStart(4, "0")}`,
       consents: {
@@ -1103,16 +1135,16 @@ export function seed(): State {
       P,
     );
   }
-  for (const [start, habit, rises] of [
-    [4, "रात के खाने के बाद 10 मिनट टहलना", [38, 70, 45, 78, 41, 68]],
-    [46, "पहले सब्ज़ी-दाल, फिर रोटी", [52, 70, 58, 74, 49, 69]],
+  for (const [start, habitId, rises] of [
+    [4, "walk_after_dinner", [38, 70, 45, 78, 41, 68]],
+    [46, "veg_dal_first", [52, 70, 58, 74, 49, 69]],
   ] as [number, string, number[]][]) {
     s.sprints.push({
       id: `SPRINT-${start}`,
       patientId: P,
       day: start,
       time: "18:00",
-      habit,
+      habitId,
       start,
       status: "complete",
       accepted: start === 4,
@@ -1153,7 +1185,7 @@ export function seed(): State {
       day: 89,
       time: "18:20",
       from: P,
-      text: "डॉक्टर साहिबा, रिपोर्ट आ गई है। मुलाक़ात में क्या लेकर आना है?",
+      text: "Doctor, my report has come. What should I bring to the visit?",
     },
     {
       id: "M2",
@@ -1161,7 +1193,7 @@ export function seed(): State {
       day: 90,
       time: "08:15",
       from: "DR-0001",
-      text: "नमस्ते रमेश जी। कृपया अपना मीटर और पिछले पर्चे साथ ले आइए।",
+      text: "Hello Ramesh. Please bring your meter and your old prescriptions.",
     },
   );
   s.moodChecks.push(
@@ -1268,4 +1300,81 @@ export function comparator() {
     n = (n * 1664525 + 1013904223) >>> 0;
     return { id: i + 1, improved: n / 4294967296 < 0.17 };
   });
+}
+
+const LEGACY_HABITS: Record<string, HabitId> = {
+  "\u0930\u093e\u0924 \u0915\u0947 \u0916\u093e\u0928\u0947 \u0915\u0947 \u092c\u093e\u0926 10 \u092e\u093f\u0928\u091f \u091f\u0939\u0932\u0928\u093e":
+    "walk_after_dinner",
+  "\u092a\u0939\u0932\u0947 \u0938\u092c\u094d\u091c\u093c\u0940-\u0926\u093e\u0932, \u092b\u093f\u0930 \u0930\u094b\u091f\u0940":
+    "veg_dal_first",
+  "\u090f\u0915 \u0930\u094b\u091f\u0940 \u0915\u092e, \u090f\u0915 \u0915\u091f\u094b\u0930\u0940 \u0926\u093e\u0932 \u091c\u093c\u094d\u092f\u093e\u0926\u093e":
+    "one_less_roti",
+  "\u0930\u093e\u0924 \u0915\u093e \u0916\u093e\u0928\u093e 8:30 \u0938\u0947 \u092a\u0939\u0932\u0947":
+    "early_dinner",
+};
+const LEGACY_COPY: Record<string, string> = {
+  "\u0916\u093e\u0928\u0947 \u0915\u0947 \u092c\u093e\u0926": "After food",
+  "\u0916\u093e\u0928\u0947 \u0938\u0947 \u092a\u0939\u0932\u0947":
+    "Before food",
+  "\u0938\u0941\u092c\u0939 \u0916\u093e\u0932\u0940 \u092a\u0947\u091f":
+    "Morning, empty stomach",
+  "\u0930\u093e\u0924 \u0915\u094b \u0938\u094b\u0928\u0947 \u0938\u0947 \u092a\u0939\u0932\u0947":
+    "At bedtime",
+  "\u0915\u094b\u0908 \u092c\u093e\u0924 \u0928\u0939\u0940\u0902 \u00b7 recorded as missed":
+    "No problem \u00b7 recorded as missed",
+  "\u0921\u0949\u0915\u094d\u091f\u0930 \u0938\u093e\u0939\u093f\u092c\u093e, \u0930\u093f\u092a\u094b\u0930\u094d\u091f \u0906 \u0917\u0908 \u0939\u0948\u0964 \u092e\u0941\u0932\u093e\u0915\u093c\u093e\u0924 \u092e\u0947\u0902 \u0915\u094d\u092f\u093e \u0932\u0947\u0915\u0930 \u0906\u0928\u093e \u0939\u0948?":
+    "Doctor, my report has come. What should I bring to the visit?",
+  "\u0928\u092e\u0938\u094d\u0924\u0947 \u0930\u092e\u0947\u0936 \u091c\u0940\u0964 \u0915\u0943\u092a\u092f\u093e \u0905\u092a\u0928\u093e \u092e\u0940\u091f\u0930 \u0914\u0930 \u092a\u093f\u091b\u0932\u0947 \u092a\u0930\u094d\u091a\u0947 \u0938\u093e\u0925 \u0932\u0947 \u0906\u0907\u090f\u0964":
+    "Hello Ramesh. Please bring your meter and your old prescriptions.",
+  "\u091c\u0940\u0928\u0947 \u0915\u093e \u092e\u0928 \u0928\u0939\u0940\u0902 \u0915\u0930\u0924\u093e":
+    "I don't feel like living anymore",
+};
+export function sessionFromStorage(value: any): State["session"] {
+  const { lang: _legacyLanguage, ...session } = value || seed().session;
+  return session;
+}
+export function migrateState(value: any): State {
+  if (!value || ![3, 4].includes(value.version)) return seed();
+  const result = structuredClone(value);
+  result.session = sessionFromStorage(result.session);
+  if (result.version === 3) {
+    for (const row of [...result.patients, ...result.sprints]) {
+      row.habitId =
+        LEGACY_HABITS[row.habit] ||
+        (Object.keys(HABITS).find(
+          (id) => HABITS[id as HabitId] === row.habit,
+        ) ??
+          null);
+      delete row.habit;
+    }
+    const translate = (v: any): any => {
+      if (typeof v === "string") {
+        let text = v;
+        const copy = {
+          ...LEGACY_COPY,
+          ...Object.fromEntries(
+            Object.entries(LEGACY_HABITS).map(([old, id]) => [old, HABITS[id]]),
+          ),
+          "Sugar Jasoos": "Sugar Detective",
+          "Rasoi Card": "Kitchen card",
+          "Parivaar Dial": "Family sharing",
+        };
+        for (const [old, english] of Object.entries(copy).sort(
+          ([a], [b]) => b.length - a.length,
+        ))
+          text = text.split(old).join(english);
+        return text;
+      }
+      if (Array.isArray(v)) return v.map(translate);
+      if (v && typeof v === "object")
+        return Object.fromEntries(
+          Object.entries(v).map(([k, x]) => [k, translate(x)]),
+        );
+      return v;
+    };
+    const translated = translate(result);
+    translated.version = 4;
+    return translated;
+  }
+  return result;
 }

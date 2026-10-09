@@ -136,14 +136,13 @@ export function Launch({
   quickLogin: (role: Exclude<Role, null>) => void;
   navigate: (route: Route) => void;
 }) {
-  const [english, setEnglish] = useState(false);
   const roles = [
     {
       role: "patient" as const,
       icon: UserRound,
       eyebrow: "For you",
       title: "Patient",
-      copy: "अपनी शुगर को समझें। छोटी आदतों का असर अपने मीटर से देखें।",
+      copy: "Understand your sugar. See the effect of small habits on your own meter.",
       accent: "neem",
     },
     {
@@ -172,13 +171,6 @@ export function Launch({
           <button onClick={() => navigate("privacy")} type="button">
             Privacy
           </button>
-          <button
-            className="lang-toggle"
-            aria-label="Switch language"
-            onClick={() => setEnglish(!english)}
-          >
-            {english ? "हिंदी" : "English"}
-          </button>
         </div>
       </div>
       <main className="launch-main">
@@ -188,20 +180,20 @@ export function Launch({
               <Sparkles size={16} /> Continuous care, made personal
             </span>
             <h1>
-              {english ? "Your meter," : "अपना मीटर,"}
+              Your meter.
               <br />
-              <em>{english ? "your own truth" : "अपना सच"}</em>
+              <em>Your proof.</em>
             </h1>
             <p>
-              90 दिनों में अपनी रोज़ की आदतों और शुगर के बीच का रिश्ता समझें —
-              अपने डॉक्टर और परिवार के साथ।
+              Understand the relationship between daily habits and sugar over 90
+              days, with your doctor and family.
             </p>
             <div className="hero-actions">
               <Button onClick={() => quickLogin("patient")}>
-                रमेश का डेमो देखें <ArrowRight size={18} />
+                See Ramesh's demo <ArrowRight size={18} />
               </Button>
               <Button variant="secondary" onClick={() => navigate("privacy")}>
-                <ShieldCheck size={18} /> आपकी प्राइवेसी
+                <ShieldCheck size={18} /> Your privacy
               </Button>
             </div>
             <div className="trust-row">
@@ -216,36 +208,39 @@ export function Launch({
               </span>
             </div>
           </div>
-          <div className="hero-visual" aria-label="Sugar Jasoos result preview">
+          <div
+            className="hero-visual"
+            aria-label="Sugar Detective result preview"
+          >
             <div className="orbit orbit-one" />
             <div className="orbit orbit-two" />
             <div className="phone-preview">
               <div className="preview-head">
                 <Logo compact />
-                <span>दिन 10 / 90</span>
+                <span>Day 10 / 90</span>
               </div>
               <div className="preview-card">
-                <span className="mini-label">शुगर जासूस का नतीजा</span>
+                <span className="mini-label">Sugar Detective result</span>
                 <div className="result-number">
                   31 <small>mg/dL</small>
                 </div>
-                <p>टहलने वाली शाम को शुगर औसतन इतना कम बढ़ी</p>
+                <p>Average smaller sugar rise on evenings with a walk</p>
                 <div className="mini-bars">
                   <div>
-                    <span>टहलकर</span>
+                    <span>With a walk</span>
                     <i className="bar bar-short" />
                     <b>41</b>
                   </div>
                   <div>
-                    <span>बिना टहले</span>
+                    <span>Without a walk</span>
                     <i className="bar bar-long" />
                     <b>72</b>
                   </div>
                 </div>
-                <StatusPill tone="success">हर बार एक जैसा</StatusPill>
+                <StatusPill tone="success">Same every time</StatusPill>
               </div>
               <div className="preview-note">
-                <Check size={18} /> आपका अपना डेटा, आपकी अपनी सीख
+                <Check size={18} /> Your own data. Your own learning.
               </div>
             </div>
           </div>
@@ -254,10 +249,10 @@ export function Launch({
         <section className="role-section">
           <div className="section-heading">
             <span>ONE SHARED CARE CIRCLE</span>
-            <h2>हर व्यक्ति के लिए सही नज़रिया</h2>
+            <h2>The right view for every role</h2>
             <p>
-              एक साझा कहानी, लेकिन हर भूमिका को सिर्फ़ उतना ही दिखता है जितना
-              ज़रूरी और मंज़ूर है।
+              One shared story. Each role sees only what is needed and
+              permitted.
             </p>
           </div>
           <div className="role-grid">
@@ -337,9 +332,9 @@ export function Launch({
       </main>
       <footer className="launch-footer">
         <span>
-          <span className="kanpur-dot" /> कानपुर में शुरू
+          <span className="kanpur-dot" /> Kanpur pilot
         </span>
-        <p>Pulse बीमारी की पहचान या दवा तय नहीं करता। फ़ैसला आपके डॉक्टर का।</p>
+        <p>Pulse does not diagnose or prescribe — your doctor decides.</p>
         <div>
           <button onClick={() => navigate("privacy")} type="button">
             Privacy notice
@@ -351,7 +346,7 @@ export function Launch({
       </footer>
       <div className="emergency-strip">
         <span>
-          <CircleAlert size={18} /> अभी मदद चाहिए?
+          <CircleAlert size={18} /> Need help now?
         </span>
         <a href="tel:112">112</a>
         <a href="tel:14416">Tele-MANAS 14416</a>

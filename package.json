@@ -18,6 +18,8 @@
     "qa:all": "pnpm build && node qa/run-all.mjs sweep clicks"
   },
   "dependencies": {
+    "@fontsource/ibm-plex-sans": "^5.3.0",
+    "@fontsource/noto-sans": "^5.3.0",
     "lucide-react": "^1.53.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

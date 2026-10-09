@@ -8,7 +8,7 @@ body {
   margin: 0;
   background: #faf6ef;
   color: var(--ink);
-  font-family: "Mukta", Arial, sans-serif;
+  font-family: "Noto Sans", Arial, sans-serif;
 }
 .m-app {
   min-height: 100vh;
@@ -120,10 +120,6 @@ body {
   position: absolute;
   top: 0;
   font-size: 11px;
-}
-.m-top button.language {
-  min-width: 36px;
-  font-weight: 700;
 }
 .m-content {
   padding: 24px 20px 100px;
@@ -959,4 +955,22 @@ h3 {
   .m-confirm-overlay {
     align-items: center;
   }
+}
+
+/* Locally bundled fonts follow the active role. */
+.role-patient,
+.role-caregiver {
+  font-family: "Noto Sans", Arial, sans-serif;
+}
+.role-doctor,
+.role-team {
+  font-family: "IBM Plex Sans", Arial, sans-serif;
+}
+.role-patient :where(h1, h2, h3, button, input, textarea, select),
+.role-caregiver :where(h1, h2, h3, button, input, textarea, select) {
+  font-family: "Noto Sans", Arial, sans-serif;
+}
+.role-doctor :where(h1, h2, h3, button, input, textarea, select),
+.role-team :where(h1, h2, h3, button, input, textarea, select) {
+  font-family: "IBM Plex Sans", Arial, sans-serif;
 }

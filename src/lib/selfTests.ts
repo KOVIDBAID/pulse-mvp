@@ -60,11 +60,39 @@ export function selfTests() {
     ]),
   );
   test("safety", "Normal 120", null, () => E.glucoseRule(base, []));
+  // @allow-devanagari
   test(
     "text",
     "Hindi crisis",
     true,
     () => E.scanText("जीने का मन नहीं करता").crisis,
+  );
+  // @end-allow-devanagari
+  test(
+    "text",
+    "English first-person crisis",
+    true,
+    () => E.scanText("I don't want to live anymore").crisis,
+  );
+  // @allow-devanagari
+  test(
+    "text",
+    "Female Hindi crisis",
+    true,
+    () => E.scanText("अब जीना नहीं चाहती").crisis,
+  );
+  // @end-allow-devanagari
+  test(
+    "text",
+    "Female Hinglish crisis",
+    true,
+    () => E.scanText("marna chahti hoon").crisis,
+  );
+  test(
+    "text",
+    "Mosquito statement is not a crisis",
+    false,
+    () => E.scanText("the mosquitoes should die").crisis,
   );
   test(
     "text",
@@ -383,6 +411,95 @@ export function selfTests() {
             .map((r) => r.clinic),
         ).size === 12,
     ),
+  );
+  test(
+    "migration",
+    "Version 3 preserves safety, consent and habit calculations",
+    true,
+    () => {
+      const legacy: any = E.seed();
+      legacy.version = 3;
+      legacy.session.lang = "hi";
+      const habits = [
+        "\u0930\u093e\u0924 \u0915\u0947 \u0916\u093e\u0928\u0947 \u0915\u0947 \u092c\u093e\u0926 10 \u092e\u093f\u0928\u091f \u091f\u0939\u0932\u0928\u093e",
+        "\u092a\u0939\u0932\u0947 \u0938\u092c\u094d\u091c\u093c\u0940-\u0926\u093e\u0932, \u092b\u093f\u0930 \u0930\u094b\u091f\u0940",
+        "\u090f\u0915 \u0930\u094b\u091f\u0940 \u0915\u092e, \u090f\u0915 \u0915\u091f\u094b\u0930\u0940 \u0926\u093e\u0932 \u091c\u093c\u094d\u092f\u093e\u0926\u093e",
+        "\u0930\u093e\u0924 \u0915\u093e \u0916\u093e\u0928\u093e 8:30 \u0938\u0947 \u092a\u0939\u0932\u0947",
+      ];
+      for (const [i, row] of legacy.sprints.entries()) {
+        row.habit = habits[i];
+        delete row.habitId;
+      }
+      for (const row of legacy.patients) {
+        row.habit = row.habitId ? habits[0] : "";
+        delete row.habitId;
+      }
+      const before = JSON.stringify({
+        alerts: legacy.alerts,
+        links: legacy.links,
+        consents: legacy.patients.map((p: any) => p.consents),
+      });
+      const migrated = E.migrateState(legacy);
+      return (
+        migrated.version === 4 &&
+        !("lang" in migrated.session) &&
+        migrated.sprints[0].habitId === "walk_after_dinner" &&
+        migrated.sprints[1].habitId === "veg_dal_first" &&
+        E.patient(migrated).habitId === "walk_after_dinner" &&
+        E.sprintResult(migrated.sprints[0].evenings).effect === 31 &&
+        before ===
+          JSON.stringify({
+            alerts: migrated.alerts,
+            links: migrated.links,
+            consents: migrated.patients.map((p) => p.consents),
+          }) &&
+        legacy.version === 3
+      );
+    },
+  );
+  test(
+    "migration",
+    "All four medicine instructions migrate, including drafts",
+    ["After food", "Before food", "Morning, empty stomach", "At bedtime"],
+    () => {
+      const legacy: any = E.seed();
+      legacy.version = 3;
+      legacy.rxDraft = {
+        medicines: [
+          "\u0916\u093e\u0928\u0947 \u0915\u0947 \u092c\u093e\u0926",
+          "\u0916\u093e\u0928\u0947 \u0938\u0947 \u092a\u0939\u0932\u0947",
+          "\u0938\u0941\u092c\u0939 \u0916\u093e\u0932\u0940 \u092a\u0947\u091f",
+          "\u0930\u093e\u0924 \u0915\u094b \u0938\u094b\u0928\u0947 \u0938\u0947 \u092a\u0939\u0932\u0947",
+        ].map((instruction) => ({ instruction })),
+      };
+      return E.migrateState(legacy).rxDraft.medicines.map(
+        (m: any) => m.instruction,
+      );
+    },
+  );
+  test("migration", "Version 4 migration is idempotent", true, () => {
+    const s = E.seed();
+    return (
+      JSON.stringify(E.migrateState(E.migrateState(s))) === JSON.stringify(s)
+    );
+  });
+  test(
+    "migration",
+    "Unsupported save version reseeds",
+    4,
+    () => E.migrateState({ version: 2 }).version,
+  );
+  test(
+    "session",
+    "Legacy tab login keeps role while dropping language",
+    { role: "caregiver", userId: "CG-0001", patientId: E.P },
+    () =>
+      E.sessionFromStorage({
+        role: "caregiver",
+        userId: "CG-0001",
+        patientId: E.P,
+        lang: "hi",
+      }),
   );
   return results;
 }

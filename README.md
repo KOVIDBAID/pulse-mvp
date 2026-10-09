@@ -14,7 +14,7 @@ python3 serve.py
 
 Open **http://127.0.0.1:5173/**. If that port is busy, use `python3 serve.py --port 5174`.
 
-Do not open `dist/index.html` directly as a file; the app needs an HTTP server. Internet access is optional for Google Fonts; system fonts are the fallback.
+Do not open `dist/index.html` directly as a file; the app needs an HTTP server. Fonts are bundled locally; no Google Fonts request is made.
 
 ## Develop
 
@@ -36,10 +36,10 @@ pnpm build
 ## Four-minute presentation
 
 1. Open **DEMO → Reset demo → Confirm**. Select **Ramesh**.
-2. Open **Sugar Jasoos** from the menu. Choose the walking experiment in History: six evenings yield a computed **31 mg/dL** lower post-dinner rise.
+2. Open **Sugar Detective** from the menu. Choose the walking experiment in History: six evenings yield a computed **31 mg/dL** lower post-dinner rise.
 3. **DEMO → Low 52**, then switch to **Amit**. Show the alert, simulated local-contact notification and acknowledgement. Switch to **Neha** to show shared ownership and her restricted medicines access.
 4. Return to **Ramesh → Log glucose** and save a fresh **100 mg/dL** recheck; the low alert resolves.
-5. **Doctor → message**: enter the synthetic phrase `जीने का मन नहीं करता`. It opens private support and creates a care-team callback item. Switch to **Pooja** to show the queue. Caregivers receive no mood notification.
+5. **Doctor → message**: enter the synthetic phrase `I don't feel like living anymore`. It opens private support and creates a care-team callback item. Switch to **Pooja** to show the queue. Caregivers receive no mood notification.
 6. Switch to **Dr. Verma**: open the patient profile, Health Map and prescription composer. The demo signing PIN is **246810**. Sign, then return to Ramesh to confirm the new reminder schedule.
 7. Open Ramesh's Day-90 Proof Card, switch to **Amit → Payments**, and approve the **mock UPI** renewal. No money moves.
 8. **Pooja → Impact**: change the clinic and cohort filters. Show **DEMO → Self-test**.
@@ -58,10 +58,25 @@ The guided mode supplies 14 navigation steps with Next/Back. Actions such as typ
 
 ## Tools and simulation boundaries
 
-Original design: Figma Make. Implementation completion: Codex. Libraries: React 19, TypeScript, Vite, Tailwind CSS v4, lucide-react, Prettier, Google Fonts (Mukta / IBM Plex Sans).
+Original design: Figma Make. Implementation completion: Codex. Libraries: React 19, TypeScript, Vite, Tailwind CSS v4, lucide-react, Prettier, local @fontsource fonts (Noto Sans / IBM Plex Sans).
 
 OTP, payments, SMS, doctor verification, meter/document OCR, home collection and band sync are explicitly simulated. Unknown uploads do not undergo live OCR, and uploaded binary files are not retained as a document vault. No live AI API, payment gateway or messaging service is connected. Patient-facing safety copy uses fixed demo templates and the supplied rules.
 
-English PHQ items are included; an official Hindi translation remains outstanding. Questionnaire reference: [University of Washington AIMS Center](https://aims.uw.edu/resource/phq-9-depression-scale/).
+English PHQ items are included; this English-only version does not need an official Hindi translation. Questionnaire reference: [University of Washington AIMS Center](https://aims.uw.edu/resource/phq-9-depression-scale/).
 
 See `QA_REPORT.md` for verification and `REQUIREMENTS_AUDIT.md` for the detailed scope comparison.
+
+## English-only UI and regression gates
+
+The UI is English-only with no language toggle. Patient/caregiver screens use local Noto Sans (400/600/700); doctor/team screens use local IBM Plex Sans (400/600). Hindi input remains recognized by the safety and myth rules.
+
+Version 4 migrates version-3 built-in medicine instructions, seeded conversation text, and habits. Habit identity uses `walk_after_dinner`, `veg_dal_first`, `one_less_roti`, and `early_dinner`; English labels derive from `HABITS`. The Kitchen card uses `veg_dal_first`, independent of its label. Shared storage remains `pulse-demo-v1`, and per-tab login remains `pulse-session-v1`.
+
+```sh
+pnpm exec playwright install chromium
+pnpm qa:static
+pnpm qa
+pnpm qa:all
+```
+
+The runner starts Vite preview on 127.0.0.1:5173 and stops it afterward. That port must be free. The sweep loads first, writes the session to `pulse-session-v1`, and reloads. `qa/baseline.txt` records the before state. In this managed workspace Chromium is installed at `/tmp/pulse-playwright-browsers`; set `PLAYWRIGHT_BROWSERS_PATH=/tmp/pulse-playwright-browsers` when running QA here. On other machines the default Playwright installation location works.

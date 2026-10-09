@@ -1616,7 +1616,7 @@
   background: #fff;
   border-radius: 13px;
   resize: none;
-  font-family: "Mukta";
+  font-family: "Noto Sans";
   font-size: 16px;
 }
 .claim-tools {
@@ -2423,7 +2423,7 @@
 .auth-story h1 {
   margin: 17px 0;
   white-space: pre-line;
-  font-family: "Mukta";
+  font-family: "Noto Sans";
   font-size: 54px;
   line-height: 0.98;
   letter-spacing: -2px;
@@ -2872,7 +2872,7 @@
 }
 .certificate-card h1 {
   margin: 9px 0 18px;
-  font-family: "Mukta";
+  font-family: "Noto Sans";
   font-size: 28px;
   line-height: 1.1;
 }
@@ -3261,7 +3261,7 @@
   min-height: 100vh;
   padding: 20px 18px 30px;
   background: linear-gradient(180deg, var(--plum-50), #fff 45%);
-  font-family: "Mukta";
+  font-family: "Noto Sans";
 }
 .crisis-top {
   display: flex;

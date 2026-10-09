@@ -7,11 +7,19 @@ Read README.md and REQUIREMENTS_AUDIT.md before changing scope. This repository 
 - src/App.tsx: React screens, shared-state context, local persistence, routing and demo controls.
 - src/lib/engine.ts: pure safety/privacy/sprint/cycle/prescription/cohort calculations and seed.
 - src/lib/selfTests.ts + tests/run.mjs: executable rule checks, also visible at #/dev/tests.
-- src/Launch.tsx: original Figma landing visual.
+- src/Launch.tsx: English Figma landing visual.
 - src/RxPreview.tsx: printable A4 synthetic prescription.
-- src/content: fixed Hindi/English labels.
+- src/content: English labels only.
 - src/mvp.css: active workflow layouts; index.css/extended.css retain export styles.
 
 Run pnpm typecheck, pnpm test and pnpm build for relevant code changes. pnpm format uses Prettier. The dev server is started with pnpm dev on port 5173; it is not assumed to be running. serve.py serves the included dist build with Python only.
 
 Use synthetic data. Preserve caregiver exclusion of mood, private notes and sensitive documents; keep patient consent and physician verification checks. Avoid real messaging, payments or medical advice. The browser store is a demo, not production authentication. Keep the audit honest when adding or leaving incomplete extended features.
+
+## English-only invariants
+
+Keep the UI English-only with no language selector; the official Hindi PHQ translation is not needed for this version. Local @fontsource Noto Sans (400/600/700) is for patient/caregiver; IBM Plex Sans (400/600) is for doctor/team. Do not introduce Google Fonts or Mukta.
+
+Store habitId, never display text as a logic key: walk_after_dinner, veg_dal_first, one_less_roti, early_dinner. Derive labels through HABITS/habitLabel. The Kitchen card is keyed on veg_dal_first. Version-3 saves migrate to version 4. Keep pulse-session-v1 and the load → sessionStorage write → reload QA login contract. Hindi input safety/myth matching and Hindi tests must remain inside @allow-devanagari / @end-allow-devanagari comments.
+
+Run pnpm typecheck, pnpm test, pnpm build, pnpm qa:static and pnpm qa after relevant refactors. qa/run-all.mjs owns its preview server on port 5173. qa/baseline.txt is an immutable before record.

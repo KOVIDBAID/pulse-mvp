@@ -44,7 +44,6 @@ const useApp = () =>
     toast: (text: string) => void;
     login: (role: E.Role, id?: string) => void;
     route: string;
-    lang: boolean;
     askConfirm: (text: string) => Promise<boolean>;
     askText: (text: string, initial?: string) => Promise<string | null>;
   };
@@ -62,8 +61,7 @@ function Btn({
   danger?: boolean;
 }) {
   const { s, askConfirm, askText } = useApp();
-  const translated =
-    typeof children === "string" ? t(children, s.session.lang) : children;
+  const translated = typeof children === "string" ? t(children) : children;
   return (
     <button
       type="button"
@@ -87,7 +85,7 @@ function Card({
   const { s, askConfirm, askText } = useApp();
   return (
     <section className={`m-card ${privateCard ? "private-card" : ""}`}>
-      {title && <h2>{t(title, s.session.lang)}</h2>}
+      {title && <h2>{t(title)}</h2>}
       {children}
     </section>
   );
@@ -116,7 +114,7 @@ function Field({
   const { s, askConfirm, askText } = useApp();
   return (
     <label className="m-field">
-      {t(label, s.session.lang)}
+      {t(label)}
       <input
         type={type}
         value={value}
@@ -132,7 +130,7 @@ function Select({ label, value, onChange, options }: any) {
   const { s, askConfirm, askText } = useApp();
   return (
     <label className="m-field">
-      {t(label, s.session.lang)}
+      {t(label)}
       <select value={value} onChange={(e) => onChange(e.target.value)}>
         {options.map((o: any) => (
           <option
@@ -150,7 +148,7 @@ function Toggle({ label, on, onChange, disabled = false }: any) {
   const { s, askConfirm, askText } = useApp();
   return (
     <label className="m-toggle">
-      <span>{t(label, s.session.lang)}</span>
+      <span>{t(label)}</span>
       <input
         type="checkbox"
         checked={!!on}
@@ -192,10 +190,10 @@ const roleNames: any = {
 };
 const navs: Record<E.Role, [string, string][]> = {
   patient: [
-    ["home", "आज"],
-    ["log", "दर्ज करें"],
-    ["progress", "प्रगति"],
-    ["records", "रिपोर्ट"],
+    ["home", "Today"],
+    ["log", "Log"],
+    ["progress", "Progress"],
+    ["records", "Records"],
   ],
   caregiver: [
     ["home", "Home"],
@@ -219,7 +217,7 @@ const navs: Record<E.Role, [string, string][]> = {
   ],
 };
 function Shell({ children, title }: { children: ReactNode; title: string }) {
-  const { s, mutate, go, lang, askConfirm, askText } = useApp();
+  const { s, mutate, go, askConfirm, askText } = useApp();
   const role = s.session.role!;
   const desktop = ["doctor", "team"].includes(role);
   const [drawer, setDrawer] = useState(false);
@@ -234,7 +232,7 @@ function Shell({ children, title }: { children: ReactNode; title: string }) {
   const extra =
     role === "patient"
       ? [
-          ["jasoos", "Sugar Jasoos"],
+          ["jasoos", "Sugar Detective"],
           ["weekly", "Weekly check"],
           ["mood", "Private mood"],
           ["doctor", "Doctor & appointments"],
@@ -317,7 +315,7 @@ function Shell({ children, title }: { children: ReactNode; title: string }) {
           <div>
             <b>{title}</b>
             <small>
-              {E.date(s.sim.day, s.session.lang)} · {s.sim.time} · Day{" "}
+              {E.date(s.sim.day)} · {s.sim.time} · Day{" "}
               {p ? s.sim.day - p.start : 0}
             </small>
           </div>
@@ -328,21 +326,11 @@ function Shell({ children, title }: { children: ReactNode; title: string }) {
             <Bell size={20} />
             <span>{unread || ""}</span>
           </button>
-          <button
-            className="language"
-            onClick={() =>
-              mutate((s) => {
-                s.session.lang = lang ? "en" : "hi";
-              })
-            }
-          >
-            {lang ? "EN" : "हिं"}
-          </button>
         </header>
         {!s.sim.online && (
           <div className="offline-banner">
-            Offline · भेजना बाकी — safety runs on this device; contact messages
-            are queued.
+            Offline — readings are saved on this phone. Safety steps still work;
+            messages to your contacts will send when you're back online.
           </div>
         )}
         <main id="main" tabIndex={-1} className="m-content">
@@ -419,7 +407,7 @@ function Shell({ children, title }: { children: ReactNode; title: string }) {
   );
 }
 function Safety({ rule, onBack }: { rule?: string; onBack?: () => void }) {
-  const { s, mutate, go, lang, askConfirm, askText } = useApp();
+  const { s, mutate, go, askConfirm, askText } = useApp();
   const alerts = s.alerts.filter(
     (a) =>
       a.patientId === s.session.patientId &&
@@ -437,12 +425,12 @@ function Safety({ rule, onBack }: { rule?: string; onBack?: () => void }) {
       privateCard={crisis}
       title={
         crisis
-          ? "अभी साथ और मदद उपलब्ध है"
+          ? "Help is available right now"
           : emergency
-            ? "तुरंत स्थानीय मदद लें"
+            ? "Get help nearby now"
             : low
-              ? "शुगर कम है — फिर जाँचें"
-              : "एक बार फिर जाँचें"
+              ? "Your sugar is low — check again"
+              : "Check once more"
       }
     >
       <Badge tone={low || emergency ? "urgent" : ""}>
@@ -451,11 +439,11 @@ function Safety({ rule, onBack }: { rule?: string; onBack?: () => void }) {
       {crisis ? (
         <>
           <p>
-            क्या आप अभी सुरक्षित हैं? कोई भरोसेमंद व्यक्ति आपके साथ रहें। परिवार
-            को mood जानकारी नहीं भेजी जाती।
+            Are you safe right now? Please stay with someone you trust. Your
+            family is never sent mood information.
           </p>
           <Toggle
-            label="मैं सुरक्षित नहीं हूँ — स्थानीय safety contact को बताएँ"
+            label="I'm not safe — tell my local safety contact"
             on={a?.contactNotified}
             onChange={() => {
               if (!E.patient(s).consents.crisisContact) {
@@ -502,11 +490,11 @@ function Safety({ rule, onBack }: { rule?: string; onBack?: () => void }) {
         </>
       ) : low ? (
         <>
-          <p>डॉक्टर द्वारा मंज़ूर निर्देश (डेमो)</p>
+          <p>Doctor-approved steps (demo)</p>
           <ol>
-            <li>3 चम्मच चीनी पानी में या 150 ml जूस लें।</li>
-            <li>बैठ जाएँ।</li>
-            <li>15 मिनट बाद फिर जाँचें।</li>
+            <li>Take 3 teaspoons of sugar in water or 150 ml of juice now.</li>
+            <li>Sit down.</li>
+            <li>Check again in 15 minutes.</li>
           </ol>
           <strong>
             {Math.max(0, 15 - elapsed)} simulated minutes until recheck
@@ -514,23 +502,20 @@ function Safety({ rule, onBack }: { rule?: string; onBack?: () => void }) {
           <p>Alert resolves after a fresh recheck of at least 70 mg/dL.</p>
         </>
       ) : code === "S0" ? (
-        <p>यह रीडिंग पुरानी है। अभी कैसा महसूस कर रहे हैं? अभी फिर जाँचें।</p>
+        <p>This reading is old. How are you feeling now? Please check again.</p>
       ) : code === "S4" ? (
         <p>
-          खाली पेट दो कम रीडिंग — डॉ. वर्मा को अगली बार बताएँ। Clinic: for your
-          review.
+          Two low fasting readings this week. We've let Dr. Verma's clinic know.
         </p>
       ) : (
         <p>
           {emergency
-            ? "1. किसी पास के व्यक्ति को बुलाएँ। 2. 112 पर कॉल करें।"
-            : "कोई गंभीर लक्षण नहीं हैं तो 2 घंटे बाद फिर जाँचें। उल्टी, बहुत सुस्ती, confusion या साँस की तकलीफ़ हो तो 112।"}
+            ? "1. Call someone nearby. 2. Call 112."
+            : "If you have no serious symptoms, check again in 2 hours. If you are vomiting, very drowsy, confused or breathless, call 112."}
         </p>
       )}
       <div className="m-actions">
-        <Btn onClick={() => go("/patient/log/glucose")}>
-          फिर जाँचा — दर्ज करें
-        </Btn>
+        <Btn onClick={() => go("/patient/log/glucose")}>Log recheck</Btn>
         <a className="m-btn secondary" href={`tel:${E.safetyContact(s).phone}`}>
           Call {E.safetyContact(s).name}
         </a>
@@ -570,7 +555,7 @@ function DoseList({
   pid: string;
   caregiver?: boolean;
 }) {
-  const { s, mutate, lang, askConfirm, askText } = useApp();
+  const { s, mutate, askConfirm, askText } = useApp();
   const latest = E.activeRx(s, pid);
   const reminders = caregiver
     ? latest
@@ -586,7 +571,7 @@ function DoseList({
   const meds = reminders?.medicines || [];
   if (!meds.length)
     return (
-      <Card title={lang ? "दिन की घड़ी" : "Medicines today"}>
+      <Card title={"Medicines today"}>
         <Empty>
           No confirmed doctor prescription yet. Medicines are added only after a
           verified doctor signs.
@@ -594,7 +579,7 @@ function DoseList({
       </Card>
     );
   return (
-    <Card title={lang ? "दिन की घड़ी" : "Medicines today"}>
+    <Card title={"Medicines today"}>
       {meds.flatMap((m: any) =>
         (m.times || E.patternTimes(m.pattern)).map((time: string) => {
           const id = `DOSE-${pid}-${s.sim.day}-${m.generic}-${time}`;
@@ -633,7 +618,7 @@ function DoseList({
                     })
                   }
                 >
-                  {status === "taken" ? "✓ लिया" : "ली"}
+                  {status === "taken" ? "Taken ✓" : "Mark taken"}
                 </Btn>
               )}
             </div>
@@ -644,7 +629,7 @@ function DoseList({
   );
 }
 function PatientHome() {
-  const { s, mutate, go, lang, askConfirm, askText } = useApp();
+  const { s, mutate, go, askConfirm, askText } = useApp();
   const p = E.patient(s);
   const readings = s.readings
     .filter((r) => r.patientId === p.id && E.visible(r, s))
@@ -665,14 +650,10 @@ function PatientHome() {
       ["S1", "S2", "S3", "S5", "S6", "S7"].includes(a.rule),
   );
   return (
-    <Shell title={lang ? "आज" : "Today"}>
+    <Shell title={"Today"}>
       <div className="m-hero">
-        <span>अपना मीटर, अपना सच</span>
-        <h1>
-          {lang
-            ? `नमस्ते ${p.name.split(" ")[0]} जी`
-            : `Hello, ${p.name.split(" ")[0]}`}
-        </h1>
+        <span>Your meter. Your proof.</span>
+        <h1>{`Hello, ${p.name.split(" ")[0]}`}</h1>
         <p>Care Cycle · Day {Math.max(0, s.sim.day - p.start)} / 90</p>
         <Badge>Synthetic demo patient</Badge>
       </div>
@@ -701,8 +682,11 @@ function PatientHome() {
           </Card>
         ))}
       {w3 && (
-        <Card title="हल्का हफ़्ता">
-          <p>बस एक छोटा कदम: {p.habit}। Pulse टीम सहायता के लिए कॉल करेगी।</p>
+        <Card title="A lighter week">
+          <p>
+            Just one small step: {E.habitLabel(p.habitId)}. The Pulse care team
+            will call to help.
+          </p>
         </Card>
       )}
       {E.activeRx(s, p.id)?.remindersConfirmed === false && (
@@ -725,21 +709,19 @@ function PatientHome() {
         </Card>
       )}
       <DoseList pid={p.id} />
-      <Card title={pr.ready ? "आपकी मेहनत, नंबरों में" : "आपका अगला कदम"}>
+      <Card title={pr.ready ? "Your effort, in numbers" : "Your next step"}>
         {pr.ready ? (
           <p>
             HbA1c {pr.baseline!.value}% → {pr.latest!.value}% · measured change{" "}
             {pr.delta} points
           </p>
         ) : (
-          <p>
-            छह शामों में अपनी आदत का असर जानें। No future results are shown.
-          </p>
+          <p>Find out what your habit does in six evenings.</p>
         )}
         <Btn
           onClick={() => go(pr.ready ? "/patient/proof" : "/patient/jasoos")}
         >
-          {pr.ready ? "Proof Card देखें" : "Sugar Jasoos खोलें"}{" "}
+          {pr.ready ? "View Proof Card" : "Open Sugar Detective"}{" "}
           <ChevronRight size={18} />
         </Btn>
       </Card>
@@ -767,7 +749,7 @@ function PatientHome() {
         </Btn>
         <Btn secondary onClick={() => go("/patient/myth")}>
           <ShieldCheck size={18} />
-          सच या झूठ?
+          True or false?
         </Btn>
         <Btn secondary onClick={() => go("/patient/privacy")}>
           <Users size={18} />
@@ -797,7 +779,7 @@ function PatientHome() {
   }
 }
 function Log() {
-  const { s, mutate, go, toast, route, lang, askConfirm, askText } = useApp();
+  const { s, mutate, go, toast, route, askConfirm, askText } = useApp();
   const [kind, setKind] = useState(
     route.includes("glucose") ? "glucose" : "menu",
   );
@@ -821,7 +803,7 @@ function Log() {
     E.minutes(measuredDay, measured) <= E.now(s);
   const save = async () => {
     if (!own) {
-      toast("किसी और की रीडिंग सुरक्षित नहीं की गई");
+      toast("Someone else's reading was not saved");
       go("/patient/home");
       return;
     }
@@ -843,7 +825,9 @@ function Log() {
         context,
         measuredAt: E.minutes(measuredDay, measured),
         symptoms,
+        // @allow-devanagari
         severe: /vomit|drowsy|confus|breath|उल्टी/.test(symptoms),
+        // @end-allow-devanagari
       });
       setResult(r.rule || "normal");
     });
@@ -852,10 +836,10 @@ function Log() {
     return (
       <Shell title="Reading saved">
         {result === "normal" ? (
-          <Card title="रीडिंग सुरक्षित हुई">
+          <Card title="Reading saved">
             <p>
               {Math.round(numeric)} mg/dL ·{" "}
-              {s.sim.online ? "Synced" : "भेजना बाकी"}
+              {s.sim.online ? "Synced" : "Waiting to send"}
             </p>
             <Btn onClick={() => go("/patient/home")}>Today</Btn>
             <Btn
@@ -880,16 +864,16 @@ function Log() {
       </Shell>
     );
   return (
-    <Shell title={lang ? "दर्ज करें" : "Log an update"}>
+    <Shell title={"Log an update"}>
       {kind === "menu" ? (
         <>
           <div className="m-grid">
             {[
-              ["glucose", "शुगर · Glucose"],
-              ["medicine", "दवा ली"],
-              ["water", "पानी"],
-              ["weight", "वज़न / BP"],
-              ["symptom", "लक्षण"],
+              ["glucose", "Sugar"],
+              ["medicine", "Medicine taken"],
+              ["water", "Water"],
+              ["weight", "Weight & BP"],
+              ["symptom", "Symptoms"],
               ["meal", "Meal photo"],
               ["note", "Private note"],
               ["report", "Lab report"],
@@ -910,7 +894,7 @@ function Log() {
           </div>
         </>
       ) : kind === "glucose" ? (
-        <Card title="Glucose · आप और अनुमति प्राप्त डॉक्टर">
+        <Card title="Sugar reading · seen by you and the doctors you allow">
           <div className="meter-display">
             {value || "—"} <small>{unit}</small>
           </div>
@@ -967,11 +951,11 @@ function Log() {
             value={context}
             onChange={setContext}
             options={[
-              ["fasting", "खाली पेट"],
-              ["before", "खाने से पहले"],
-              ["after", "2 घंटे बाद"],
-              ["bedtime", "सोने से पहले"],
-              ["any", "कभी भी"],
+              ["fasting", "Fasting"],
+              ["before", "Before meal"],
+              ["after", "2 hours after meal"],
+              ["bedtime", "Bedtime"],
+              ["any", "Other time"],
             ]}
           />
           <Field
@@ -994,7 +978,7 @@ function Log() {
             onChange={setSymptoms}
           />
           <Toggle
-            label="यह आपकी रीडिंग है?"
+            label="Is this your reading?"
             on={own}
             onChange={() => setOwn(!own)}
           />
@@ -1036,7 +1020,7 @@ function Log() {
             stale-reading path.
           </p>
           <Btn disabled={!valid || !confirmed} onClick={save}>
-            रीडिंग सुरक्षित करें
+            Save reading
           </Btn>
         </Card>
       ) : kind === "water" ? (
@@ -1130,9 +1114,9 @@ function Water() {
   );
   const count = rows.reduce((sum, r) => sum + r.amount, 0);
   return (
-    <Card title="पानी · manually logged">
+    <Card title="Water · logged by you">
       <strong className="big-number">{count}</strong>
-      <p>गिलास today</p>
+      <p>glasses today</p>
       <div className="m-actions">
         <Btn
           onClick={() =>
@@ -1169,18 +1153,13 @@ function Water() {
     </Card>
   );
 }
-const habits = [
-  "रात के खाने के बाद 10 मिनट टहलना",
-  "पहले सब्ज़ी-दाल, फिर रोटी",
-  "एक रोटी कम, एक कटोरी दाल ज़्यादा",
-  "रात का खाना 8:30 से पहले",
-];
+const habits = Object.entries(E.HABITS);
 function Sprint() {
   const { s, mutate, go, toast, askConfirm, askText } = useApp();
   const pid = E.patient(s).id;
   const list = s.sprints.filter((r) => r.patientId === pid && E.visible(r, s));
   const [selected, setSelected] = useState(list.at(-1)?.id || "");
-  const [habit, setHabit] = useState(habits[0]);
+  const [habitId, setHabitId] = useState<string>(habits[0][0]);
   const [before, setBefore] = useState("");
   const [after, setAfter] = useState("");
   const [fasting, setFasting] = useState("");
@@ -1194,10 +1173,10 @@ function Sprint() {
   const result = E.sprintResult(evenings);
   const p = E.patient(s);
   return (
-    <Shell title="Sugar Jasoos">
+    <Shell title="Sugar Detective">
       <div className="m-hero">
         <FlaskConical size={32} />
-        <h1>अपना मीटर, अपना सच</h1>
+        <h1>Your meter. Your proof.</h1>
         <p>6 evenings · A / B / A / B / A / B · about 12 strips</p>
       </div>
       {!p.consents.sprint || p.insulin ? (
@@ -1216,12 +1195,15 @@ function Sprint() {
               label="History"
               value={sp?.id || ""}
               onChange={setSelected}
-              options={list.map((r) => [r.id, `${r.habit} · Day ${r.day}`])}
+              options={list.map((r) => [
+                r.id,
+                `${E.habitLabel(r.habitId)} · Day ${r.day}`,
+              ])}
             />
             <Select
               label="Doctor-approved habit"
-              value={habit}
-              onChange={setHabit}
+              value={habitId}
+              onChange={setHabitId}
               options={habits}
             />
             <Btn
@@ -1232,7 +1214,7 @@ function Sprint() {
                     id,
                     patientId: pid,
                     ...E.stamp(s),
-                    habit,
+                    habitId,
                     start: s.sim.day,
                     status: "active",
                     evenings: [],
@@ -1251,20 +1233,20 @@ function Sprint() {
           </Card>
           {sp && (
             <>
-              <Card title={sp.habit}>
+              <Card title={E.habitLabel(sp.habitId)}>
                 <Badge>
                   {result.status === "result"
-                    ? "शुरुआती नतीजा"
+                    ? "Early result"
                     : result.status === "need_more_evenings"
                       ? "More evenings needed"
                       : "No clear difference"}
                 </Badge>
                 {result.status === "result" ? (
                   <>
-                    <h1>{result.effect} mg/dL कम बढ़ी</h1>
+                    <h1>{result.effect} mg/dL smaller rise</h1>
                     <p>
                       With habit {result.meanA} · without habit {result.meanB} ·{" "}
-                      {result.consistent ? "हर बार एक जैसा" : "Early signal"}
+                      {result.consistent ? "Same every time" : "Early signal"}
                     </p>
                     <div className="sprint-bars">
                       <div style={{ width: `${Math.max(10, result.meanA!)}%` }}>
@@ -1278,14 +1260,14 @@ function Sprint() {
                       <Btn
                         onClick={() => {
                           mutate((s) => {
-                            E.patient(s).habit = sp.habit;
+                            E.patient(s).habitId = sp.habitId;
                             s.sprints.find((r) => r.id === sp.id)!.accepted =
                               true;
                           });
                           toast("Habit adopted for weekly checks");
                         }}
                       >
-                        इसे अपनी आदत बनाएँ
+                        Make it my habit
                       </Btn>
                       <Btn
                         secondary
@@ -1303,11 +1285,11 @@ function Sprint() {
                           }
                           share(
                             "Pulse: my own experiment",
-                            `${sp.habit}: post-dinner rise ${result.effect} mg/dL lower · early signal`,
+                            `${E.habitLabel(sp.habitId)}: post-dinner rise ${result.effect} mg/dL lower · early signal`,
                           );
                         }}
                       >
-                        परिवार को बताएँ
+                        Tell family
                       </Btn>
                     </div>
                   </>
@@ -1372,7 +1354,7 @@ function Sprint() {
                       })
                     }
                   >
-                    खाना ख़त्म — start 2-hour timer
+                    Dinner finished — start 2-hour timer
                   </Btn>
                   {sp.dinnerAt != null && (
                     <p>
@@ -1471,7 +1453,7 @@ function Weekly() {
       E.visible(w, s),
   );
   return (
-    <Shell title="रविवार की जाँच">
+    <Shell title="Sunday check">
       <Card title="One update for this week">
         <p>
           Shared: habit and medicine summary only with permitted family. Mood
@@ -1500,9 +1482,9 @@ function Weekly() {
               value={missed}
               onChange={setMissed}
               options={[
-                ["0", "नहीं"],
-                ["2", "1–2 बार"],
-                ["3", "3 या ज़्यादा"],
+                ["0", "No"],
+                ["2", "1–2 times"],
+                ["3", "3 or more"],
               ]}
             />
             <Select
@@ -1510,10 +1492,10 @@ function Weekly() {
               value={feeling}
               onChange={setFeeling}
               options={[
-                ["okay", "ठीक"],
-                ["tired", "थका हुआ"],
-                ["unwell", "तबीयत ठीक नहीं"],
-                ["low", "मन उदास"],
+                ["okay", "Fine"],
+                ["tired", "Tired"],
+                ["unwell", "Unwell"],
+                ["low", "Low mood"],
               ]}
             />
             <Btn
@@ -1527,7 +1509,7 @@ function Weekly() {
                     status: s.sim.online ? "synced" : "queued",
                   }),
                 );
-                toast("धन्यवाद — weekly check saved");
+                toast("Thank you — weekly check saved");
                 go(
                   feeling === "low"
                     ? "/patient/mood"
@@ -1537,7 +1519,7 @@ function Weekly() {
                 );
               }}
             >
-              इस हफ़्ते का अपडेट भेजें
+              Send this week's update
             </Btn>
           </>
         )}
@@ -1564,7 +1546,7 @@ function Mood() {
   const p = E.patient(s);
   return (
     <Shell title="Private mood check">
-      <Card title="सिर्फ़ आप · care team with consent" privateCard>
+      <Card title="Only you · care team with your consent" privateCard>
         {!p.consents.mood ? (
           <>
             <p>Mood consent is off. No answers are collected.</p>
@@ -1593,8 +1575,7 @@ function Mood() {
           <>
             <p>
               Over the last two weeks, how often have you been bothered by these
-              problems? English questionnaire below; an official Hindi
-              translation still needs to be supplied.
+              problems?
             </p>
             {phq.slice(0, full ? 9 : 2).map((question, i) => (
               <Select
@@ -1664,7 +1645,7 @@ function Progress() {
     (r) => r.patientId === pid && r.context === "fasting" && E.visible(r, s),
   );
   return (
-    <Shell title="आपकी प्रगति">
+    <Shell title="Your progress">
       <Card title="Measured HbA1c change">
         {pr.baseline ? (
           <>
@@ -1713,7 +1694,7 @@ function Progress() {
             <p>n={readings.length} · own glucometer · mg/dL</p>
           </>
         ) : (
-          <Empty>पहली रीडिंग के बाद यहाँ दिखेगा</Empty>
+          <Empty>Shows up after your first reading</Empty>
         )}
       </Card>
       <Card title="Experiments">
@@ -1727,7 +1708,7 @@ function Progress() {
               <div className="m-row" key={r.id}>
                 <FlaskConical />
                 <div>
-                  {r.habit}
+                  {E.habitLabel(r.habitId)}
                   <small>
                     {result.status === "result"
                       ? `${result.effect} mg/dL · early signal`
@@ -2107,7 +2088,7 @@ function Privacy() {
       });
   };
   return (
-    <Shell title="Consent & Parivaar Dial">
+    <Shell title="Consent & Family sharing">
       <Card title="You decide what is collected">
         <p>
           Optional data can be withdrawn as easily as given. Family is never
@@ -2560,7 +2541,7 @@ function Myth() {
   const [result, setResult] = useState("");
   const pid = s.session.patientId;
   return (
-    <Shell title="सच या झूठ? · Myth buster">
+    <Shell title="True or false? · Myth buster">
       <Card title="Check a health claim">
         <textarea
           aria-label="Claim to check"
@@ -2603,14 +2584,14 @@ function Myth() {
         <Card
           title={
             result === "true"
-              ? "सच"
+              ? "True"
               : result === "false"
-                ? "झूठ"
+                ? "False"
                 : result === "misleading"
-                  ? "आधा सच"
+                  ? "Partly true"
                   : result === "not_health"
                     ? "Not a health claim"
-                    : "जाँच नहीं हुई"
+                    : "Not checked yet"
           }
         >
           <p>{text}</p>
@@ -2618,7 +2599,7 @@ function Myth() {
             {result === "unverified"
               ? "Sent to a human demo reviewer. We’ll notify you after publishing."
               : result === "false"
-                ? "दवा बंद या बदलनी हो तो सिर्फ़ डॉक्टर से।"
+                ? "Only change or stop medicines with your doctor."
                 : result === "true"
                   ? "Doctor-reviewed fixed demo template. Personal meter results are early signals."
                   : "Ask your doctor about this claim."}
@@ -2896,16 +2877,20 @@ function Caregiver() {
               <Card
                 key={sp.id}
                 title={
-                  sp.habit.includes("सब्ज़ी") ? "Rasoi Card" : "What worked"
+                  sp.habitId === "veg_dal_first"
+                    ? "Kitchen card"
+                    : "What worked"
                 }
               >
                 <p>
-                  {sp.habit} · post-dinner rise {r.effect} mg/dL lower · early
-                  signal
+                  {E.habitLabel(sp.habitId)} · post-dinner rise {r.effect} mg/dL
+                  lower · early signal
                 </p>
                 <Btn
                   secondary
-                  onClick={() => share("Family habit card", sp.habit)}
+                  onClick={() =>
+                    share("Family habit card", E.habitLabel(sp.habitId))
+                  }
                 >
                   Send habit to family cook
                 </Btn>
@@ -3706,7 +3691,7 @@ function DoctorPatient() {
                   );
                   return (
                     <p key={sp.id}>
-                      {sp.habit} ·{" "}
+                      {E.habitLabel(sp.habitId)} ·{" "}
                       {result.status === "result"
                         ? `${result.effect} mg/dL lower rise · early signal`
                         : result.status}
@@ -3775,7 +3760,7 @@ function DoctorPatient() {
                       key={r.id}
                       role="button"
                       tabIndex={0}
-                      aria-label={`Open ${r.title || r.habit || "HbA1c " + r.value}`}
+                      aria-label={`Open ${r.title || E.habitLabel(r.habitId) || "HbA1c " + r.value}`}
                       onClick={() => setNode(r)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") setNode(r);
@@ -3795,7 +3780,7 @@ function DoctorPatient() {
                       <text x={x} y={y} textAnchor="middle" fontSize="11">
                         {r.value
                           ? "HbA1c " + r.value
-                          : r.habit
+                          : r.habitId
                             ? "Habit"
                             : "Record"}
                       </text>
@@ -3805,7 +3790,11 @@ function DoctorPatient() {
               </svg>
               {node && (
                 <div className="m-detail">
-                  <h3>{node.title || node.habit || `HbA1c ${node.value}%`}</h3>
+                  <h3>
+                    {node.title ||
+                      E.habitLabel(node.habitId) ||
+                      `HbA1c ${node.value}%`}
+                  </h3>
                   <p>
                     Source · {E.date(node.day)} ·{" "}
                     {node.verified ? "Verified" : "Unverified"}
@@ -3833,7 +3822,7 @@ function DoctorPatient() {
                   key={r.id}
                   onClick={() => setNode(r)}
                 >
-                  {r.title || r.habit || `HbA1c ${r.value}%`} ·{" "}
+                  {r.title || E.habitLabel(r.habitId) || `HbA1c ${r.value}%`} ·{" "}
                   {r.verified === false ? "unverified" : "source record"}
                 </button>
               ))}
@@ -4157,14 +4146,14 @@ function Rx() {
                     }
                   />
                   <Select
-                    label="Hindi instruction"
+                    label="Patient instruction"
                     value={m.instruction}
                     onChange={(v: string) => updateMed(i, "instruction", v)}
                     options={[
-                      "खाने के बाद",
-                      "खाने से पहले",
-                      "सुबह खाली पेट",
-                      "रात को सोने से पहले",
+                      "After food",
+                      "Before food",
+                      "Morning, empty stomach",
+                      "At bedtime",
                     ]}
                   />
                 </div>
@@ -4195,7 +4184,7 @@ function Rx() {
                       strength: "500 mg",
                       pattern: "1-0-1",
                       duration: 90,
-                      instruction: "खाने के बाद",
+                      instruction: "After food",
                     },
                   ],
                 })
@@ -4606,7 +4595,7 @@ function MythReview() {
   const { s, mutate, toast, askConfirm, askText } = useApp();
   const [verdict, setVerdict] = useState("false");
   const [reason, setReason] = useState(
-    "दवा में बदलाव सिर्फ़ आपके डॉक्टर करेंगे।",
+    "Only your doctor will change your medicines.",
   );
   const [source, setSource] = useState("Demo human reviewer");
   const list = s.myths.filter((m) => m.status === "waiting" && E.visible(m, s));
@@ -4916,7 +4905,7 @@ function Band() {
   return (
     <Shell title="Wellness band">
       <Card title="Optional demo band">
-        <p>स्वास्थ्य-रुझान के लिए — बीमारी की पहचान के लिए नहीं</p>
+        <p>For wellness trends — not for diagnosis</p>
         <p>This demo simulates band sync. Water is entered manually.</p>
         {!p.consents.band ? (
           <Btn onClick={() => go("/patient/privacy")}>
@@ -5242,7 +5231,7 @@ function Auth({ role }: { role: E.Role }) {
           ? s.patients.find((p) => p.mobile === mobile && !p.deleted)
           : null;
       if (role === "patient" && !matching) {
-        toast("यह नंबर रजिस्टर नहीं है — Register to continue");
+        toast("This number isn't registered — register to continue");
         return;
       }
       login(role, matching?.id);
@@ -5266,7 +5255,7 @@ function Auth({ role }: { role: E.Role }) {
         inPerson: null,
         insulin,
         deleted: false,
-        habit: "",
+        habitId: null,
         consents: { ...consents, sprint: !!consents.sprint && meter },
         target: 7,
         mobile,
@@ -5378,7 +5367,7 @@ function Auth({ role }: { role: E.Role }) {
                       qualification: "Demo qualification",
                     };
                   else s.users[id] = { name, city };
-                  s.session = { role, userId: id, patientId: E.P, lang: "en" };
+                  s.session = { role, userId: id, patientId: E.P };
                 });
                 go(role === "doctor" ? "/doctor/home" : "/caregiver/connect");
               }}
@@ -5681,7 +5670,6 @@ function Demo() {
                 ? "DR-0001"
                 : "TEAM",
         patientId: E.P,
-        lang: role === "patient" ? "hi" : "en",
       };
       E.advance(s, day, "10:30");
       s.session.patientId = E.P;
@@ -5705,13 +5693,13 @@ function Demo() {
           measuredAt: kind === "Stale low" ? E.now(s) - 420 : E.now(s),
         });
       else if (kind === "Crisis message") {
-        E.textEvent(s, "जीने का मन नहीं करता");
+        E.textEvent(s, "I don't feel like living anymore");
         s.messages.push({
           id: E.uid("CRISIS"),
           patientId: E.P,
           ...E.stamp(s),
           from: E.P,
-          text: "जीने का मन नहीं करता",
+          text: "I don't feel like living anymore",
         });
       } else if (kind === "Fasting 74 + 77") {
         const prev = s.sim;
@@ -6043,16 +6031,17 @@ export default function App() {
   const [s, setState] = useState<E.State>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(KEY) || "null");
-      if (saved?.version === 3) {
-        saved.users ||= E.seed().users;
+      if ([3, 4].includes(saved?.version)) {
+        const migrated = E.migrateState(saved);
+        migrated.users ||= E.seed().users;
         try {
-          saved.session =
-            JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null") ||
-            E.seed().session;
+          migrated.session = E.sessionFromStorage(
+            JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null"),
+          );
         } catch {
-          saved.session = E.seed().session;
+          migrated.session = E.seed().session;
         }
-        return saved;
+        return migrated;
       }
       return E.seed();
     } catch {
@@ -6123,7 +6112,6 @@ export default function App() {
         role,
         userId: user,
         patientId: E.P,
-        lang: role === "patient" ? "hi" : "en",
       };
     });
     setLocked(false);
@@ -6157,8 +6145,11 @@ export default function App() {
       if (e.key === KEY && e.newValue)
         try {
           const v = JSON.parse(e.newValue);
-          if (v.version === 3)
-            setState((prev) => ({ ...v, session: prev.session }));
+          if ([3, 4].includes(v.version))
+            setState((prev) => ({
+              ...E.migrateState(v),
+              session: prev.session,
+            }));
         } catch {}
     };
     addEventListener("storage", handler);
@@ -6319,8 +6310,8 @@ export default function App() {
         <p>
           Mood and private notes never go to family. Sensitive records stay
           hidden from caregivers. You can access, correct, erase or withdraw
-          through My data and Consent. शिकायत के लिए Data Protection Board of
-          India से संपर्क कर सकते हैं।
+          through My data and Consent. You can also complain to the Data
+          Protection Board of India.
         </p>
         <Btn onClick={() => go("/")}>Home</Btn>
       </div>
@@ -6518,7 +6509,6 @@ export default function App() {
         toast,
         login,
         route,
-        lang: s.session.lang === "hi",
         askConfirm,
         askText,
       }}
