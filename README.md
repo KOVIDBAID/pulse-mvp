@@ -80,3 +80,7 @@ pnpm qa:all
 ```
 
 The runner starts Vite preview on 127.0.0.1:5173 and stops it afterward. That port must be free. The sweep loads first, writes the session to `pulse-session-v1`, and reloads. `qa/baseline.txt` records the before state. In this managed workspace Chromium is installed at `/tmp/pulse-playwright-browsers`; set `PLAYWRIGHT_BROWSERS_PATH=/tmp/pulse-playwright-browsers` when running QA here. On other machines the default Playwright installation location works.
+
+Unknown saved text containing Devanagari is shown as an English review notice; the original stays on the same record under `_legacyText` and is included in the patient's JSON export. Unknown medicine instructions explicitly require clinician review. Safety rules evaluate the original symptoms. Version-4 saves are normalized too, covering saves from the earlier partial conversion. This is a display safeguard, not automatic translation of clinical or personal text.
+
+QA now waits for its own preview process, verifies its response against `dist/index.html`, and awaits shutdown. A busy port fails immediately. Keep the default port 5173 free, or explicitly run `PULSE_QA_PORT=5175 pnpm qa:all`. Runner regression checks: `node --test qa/runner.test.mjs`. Legacy UI/export check: `node qa/run-all.mjs migration` (with the same port/browser environment variables if needed).

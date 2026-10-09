@@ -1,0 +1,7 @@
+Preview failed to start on port 5173 (exit 1). error when starting preview server:
+Error: Port 5173 is already in use
+    at httpServerStart (file:///home/snorlax-xd/Documents/Codex/2026-10-09/b/outputs/pulse-mvp/node_modules/.pnpm/vite@8.0.5_@types+node@22.19.17_jiti@2.6.1/node_modules/vite/dist/node/chunks/node.js:10654:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async preview (file:///home/snorlax-xd/Documents/Codex/2026-10-09/b/outputs/pulse-mvp/node_modules/.pnpm/vite@8.0.5_@types+node@22.19.17_jiti@2.6.1/node_modules/vite/dist/node/chunks/node.js:33620:2)
+    at async CAC.<anonymous> (file:///home/snorlax-xd/Documents/Codex/2026-10-09/b/outputs/pulse-mvp/node_modules/.pnpm/vite@8.0.5_@types+node@22.19.17_jiti@2.6.1/node_modules/vite/dist/node/cli.js:809:18)
+Owned preview stopped

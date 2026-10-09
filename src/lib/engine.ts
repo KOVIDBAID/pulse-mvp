@@ -258,7 +258,8 @@ export function glucoseRule(r: Row, history: Row[]) {
     )
   )
     return "S3";
-  if (v < 54 || (v < 70 && scanText(r.symptoms || "").hypo)) return "S1";
+  if (v < 54 || (v < 70 && scanText(storedText(r, "symptoms")).hypo))
+    return "S1";
   if (v < 70) return "S2";
   if (v > 300) return "S5";
   if (
@@ -577,7 +578,7 @@ export function recordReading(s: State, input: any, pid = s.session.patientId) {
   const history = s.readings.filter(
     (h) => h.patientId === pid && visible(h, s),
   );
-  const hits = scanText(r.symptoms);
+  const hits = scanText(storedText(r, "symptoms"));
   const textRule = hits.cardiac ? "S6" : hits.crisis ? "S7" : null;
   const rule =
     textRule ||
@@ -1333,6 +1334,42 @@ export function sessionFromStorage(value: any): State["session"] {
   const { lang: _legacyLanguage, ...session } = value || seed().session;
   return session;
 }
+// Preserve original saved input for rule evaluation and patient data exports.
+export function storedText(row: Row, field: string): string {
+  return row._legacyText?.[field] ?? row[field] ?? "";
+}
+const hasDevanagari = (text: string) => /[\u0900-\u097f]/u.test(text);
+function englishSavedText(value: any, original: any = value): any {
+  if (Array.isArray(value))
+    return value.map((item, i) => englishSavedText(item, original?.[i]));
+  if (value && typeof value === "object") {
+    const result: any = {};
+    const originals = { ...value._legacyText };
+    for (const [key, item] of Object.entries(value)) {
+      if (key === "_legacyText") continue;
+      if (typeof item === "string" && hasDevanagari(item)) {
+        originals[key] = original?.[key] ?? item;
+        result[key] =
+          key === "instruction"
+            ? "Instruction needs clinician review. Original retained in your data export."
+            : "Saved text needs English review. Original retained in your data export.";
+      } else {
+        if (
+          Array.isArray(item) &&
+          item.some((x) => typeof x === "string" && hasDevanagari(x))
+        )
+          originals[key] = structuredClone(original?.[key] ?? item);
+        result[key] = englishSavedText(item, original?.[key]);
+      }
+    }
+    if (Object.keys(originals).length) result._legacyText = originals;
+    return result;
+  }
+  // Handle historical arrays of strings as well as normal record fields.
+  if (typeof value === "string" && hasDevanagari(value))
+    return "Saved text needs English review. Original retained in your data export.";
+  return value;
+}
 export function migrateState(value: any): State {
   if (!value || ![3, 4].includes(value.version)) return seed();
   const result = structuredClone(value);
@@ -1374,7 +1411,7 @@ export function migrateState(value: any): State {
     };
     const translated = translate(result);
     translated.version = 4;
-    return translated;
+    return englishSavedText(translated, result);
   }
-  return result;
+  return englishSavedText(result);
 }

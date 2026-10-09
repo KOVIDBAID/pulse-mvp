@@ -1,0 +1,3 @@
+Verified owned production preview: http://127.0.0.1:5175
+PASS legacy UI: English notice, version-3 tab login, original text in patient export, no runtime errors
+Owned preview stopped

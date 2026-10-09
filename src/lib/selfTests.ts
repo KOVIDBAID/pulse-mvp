@@ -501,5 +501,85 @@ export function selfTests() {
         lang: "hi",
       }),
   );
+  test(
+    "migration",
+    "Unlisted legacy text stays available in export but is not displayed",
+    true,
+    () => {
+      const old: any = E.seed();
+      old.version = 3;
+      const text =
+        "\u0906\u091c \u0905\u091a\u094d\u091b\u093e \u0932\u0917 \u0930\u0939\u093e \u0939\u0948";
+      old.messages[0].text = text;
+      old.notes.push({
+        id: "PRIVATE-OLD",
+        patientId: E.P,
+        day: 90,
+        time: "10:30",
+        text,
+        private: true,
+        owner: E.P,
+      });
+      const result = E.migrateState(old);
+      return (
+        !/[\u0900-\u097f]/u.test(result.messages[0].text) &&
+        result.messages[0]._legacyText.text === text &&
+        result.notes.at(-1)!._legacyText.text === text &&
+        E.view(result, "CG-0001", E.P, "privateNotes", result.notes).length ===
+          0 &&
+        JSON.stringify(E.migrateState(result)) === JSON.stringify(result) &&
+        old.messages[0].text === text
+      );
+    },
+  );
+  test(
+    "migration",
+    "Archived symptoms still trigger the original low-sugar rule",
+    "S1",
+    () => {
+      const old: any = E.seed();
+      old.version = 3;
+      old.readings.push({
+        ...base,
+        value: 64,
+        symptoms: "\u091a\u0915\u094d\u0915\u0930",
+        measuredAt: E.minutes(90, "10:30"),
+      });
+      const migrated = E.migrateState(old);
+      return E.glucoseRule(migrated.readings.at(-1)!, []);
+    },
+  );
+  test(
+    "migration",
+    "Existing version 4 saves also normalize unknown old text",
+    true,
+    () => {
+      const s = E.seed();
+      s.messages[0].text = "\u0906\u091c";
+      const result = E.migrateState(s);
+      return (
+        result.messages[0].text.includes("English review") &&
+        result.messages[0]._legacyText.text === s.messages[0].text
+      );
+    },
+  );
+  test(
+    "migration",
+    "Unknown prescription instructions require review rather than an invented translation",
+    true,
+    () => {
+      const old: any = E.seed();
+      old.version = 3;
+      old.prescriptions[0].medicines[0].instruction =
+        "\u0905\u091c\u094d\u091e\u093e\u0924 \u0928\u093f\u0930\u094d\u0926\u0947\u0936";
+      const result = E.migrateState(old);
+      const m = result.prescriptions[0].medicines[0];
+      return (
+        m.instruction.startsWith("Instruction needs clinician review") &&
+        m._legacyText.instruction ===
+          old.prescriptions[0].medicines[0].instruction
+      );
+    },
+  );
   return results;
 }
