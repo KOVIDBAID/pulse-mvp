@@ -37,6 +37,7 @@ import {
 } from "./app/routes";
 import { FEATURES, featureVisible } from "./app/features";
 import * as E from "./lib/engine";
+import * as HC from "./lib/healthConnect";
 import { selfTests } from "./lib/selfTests";
 import "./extended.css";
 import "./mvp.css";
@@ -268,7 +269,8 @@ function Shell({ children, title }: { children: ReactNode; title: string }) {
             .filter(
               (item) =>
                 featureVisible(item.path.split("?")[0]) &&
-                (item.path !== "sugar-detective" || !!p?.habitId),
+                (item.path !== "sugar-detective" ||
+                  !!p?.sugarDetectivePrescribed),
             )
             .map((item) => (
               <button
@@ -540,6 +542,9 @@ function Safety({ rule, onBack }: { rule?: string; onBack?: () => void }) {
       <Badge tone={low || emergency ? "urgent" : ""}>
         {code} · {a?.value ?? ""} {a?.value ? "mg/dL" : ""}
       </Badge>
+      {a?.value && (
+        <SourceBadge row={s.readings.find((r) => r.id === a.source)} />
+      )}
       {crisis ? (
         <>
           <p>
@@ -813,28 +818,38 @@ function PatientHome() {
         </Card>
       )}
       <DoseList pid={p.id} />
+      {FEATURES.wellnessBand && (
+        <EmbeddedViews>
+          <Band />
+        </EmbeddedViews>
+      )}
       <Card title={pr.ready ? "Your effort, in numbers" : "Your next step"}>
         {pr.ready ? (
           <p>
-            HbA1c {pr.baseline!.value}% → {pr.latest!.value}% · measured change{" "}
+            <SourceBadge row={pr.latest!} source="lab" /> HbA1c{" "}
+            {pr.baseline!.value}% → {pr.latest!.value}% · measured change{" "}
             {pr.delta} points
           </p>
         ) : (
           <p>Find out what your habit does in six evenings.</p>
         )}
-        <Btn
-          onClick={() => go(pr.ready ? "/patient/proof" : "/patient/jasoos")}
-        >
-          {pr.ready ? "View Proof Card" : "Open Sugar Detective"}{" "}
-          <ChevronRight size={18} />
-        </Btn>
+        {(pr.ready ||
+          (FEATURES.sugarDetective && p.sugarDetectivePrescribed)) && (
+          <Btn
+            onClick={() => go(pr.ready ? "/patient/proof" : "/patient/jasoos")}
+          >
+            {pr.ready ? "View Proof Card" : "Open Sugar Detective"}{" "}
+            <ChevronRight size={18} />
+          </Btn>
+        )}
       </Card>
       <div className="m-grid">
         <Card title="Latest reading">
           <strong className="big-number">
             {readings.at(-1)?.value ?? "—"}
           </strong>
-          <p>mg/dL · your meter</p>
+          <p>mg/dL</p>
+          <SourceBadge row={readings.at(-1)} />
           <Btn secondary onClick={() => go("/patient/log/glucose")}>
             Log glucose
           </Btn>
@@ -853,10 +868,12 @@ function PatientHome() {
           <MessageCircle size={18} />
           Doctor
         </Btn>
-        <Btn secondary onClick={() => go("/patient/myth")}>
-          <ShieldCheck size={18} />
-          True or false?
-        </Btn>
+        {FEATURES.mythBuster && (
+          <Btn secondary onClick={() => go("/patient/myth")}>
+            <ShieldCheck size={18} />
+            True or false?
+          </Btn>
+        )}
         <Btn secondary onClick={() => go("/patient/privacy")}>
           <Users size={18} />
           Consent & family
@@ -891,6 +908,7 @@ function Log() {
   );
   const [value, setValue] = useState("");
   const [unit, setUnit] = useState("mg/dL");
+  const [readingSource, setReadingSource] = useState<E.DataSource>("typed");
   const [context, setContext] = useState("fasting");
   const [measured, setMeasured] = useState(s.sim.time);
   const [measuredDay, setMeasuredDay] = useState(s.sim.day);
@@ -929,6 +947,7 @@ function Log() {
         value: Math.round(numeric),
         flag: ["LO", "HI"].includes(value) ? value : undefined,
         context,
+        source: readingSource,
         measuredAt: E.minutes(measuredDay, measured),
         symptoms,
         // @allow-devanagari
@@ -947,6 +966,16 @@ function Log() {
               {Math.round(numeric)} mg/dL ·{" "}
               {s.sim.online ? "Synced" : "Waiting to send"}
             </p>
+            <SourceBadge
+              row={s.readings
+                .filter(
+                  (r) =>
+                    r.patientId === E.patient(s).id &&
+                    r.value === Math.round(numeric),
+                )
+                .at(-1)}
+              source={readingSource}
+            />
             <Btn onClick={() => go("/patient/home")}>Today</Btn>
             <Btn
               secondary
@@ -1025,6 +1054,7 @@ function Log() {
             value={value}
             onChange={(v: string) => {
               setValue(v);
+              setReadingSource("typed");
               setConfirmed(true);
             }}
           />
@@ -1054,6 +1084,7 @@ function Log() {
               <button
                 key={k}
                 onClick={() => {
+                  setReadingSource("typed");
                   setValue((v) =>
                     k === "⌫"
                       ? v.slice(0, -1)
@@ -1120,6 +1151,7 @@ function Log() {
                     : "142",
               );
               setUnit(v === "meter_5_2_mmol" ? "mmol/L" : "mg/dL");
+              setReadingSource("meter-photo");
               setConfirmed(false);
             }}
             options={[
@@ -1212,6 +1244,10 @@ function Log() {
                   id: E.uid("WEIGHT"),
                   patientId: E.patient(s).id,
                   ...E.stamp(s),
+                  source: "typed",
+                  measuredAt: E.now(s),
+                  value: Number(value),
+                  metric: "weight",
                   text: `Weight ${value} kg`,
                   owner: E.patient(s).id,
                   shared: false,
@@ -1330,6 +1366,10 @@ function Sprint() {
               options={habits}
             />
             <Btn
+              disabled={
+                !FEATURES.sugarDetective ||
+                !E.patient(s).sugarDetectivePrescribed
+              }
               onClick={() => {
                 mutate((s) => {
                   const id = E.uid("SPRINT");
@@ -1776,6 +1816,7 @@ function Progress() {
               {pr.baseline.value}% →{" "}
               {pr.ready ? pr.latest!.value + "%" : "pending"}
             </strong>
+            <SourceBadge row={pr.latest || pr.baseline} source="lab" />
             <p>
               Verified labs only · target set by doctor {E.patient(s).target}%
             </p>
@@ -1814,7 +1855,14 @@ function Progress() {
                 </circle>
               ))}
             </svg>
-            <p>n={readings.length} · own glucometer · mg/dL</p>
+            <p>n={readings.length} · mg/dL</p>
+            <div className="source-legend">
+              {[...new Set(readings.map((r) => r.source as E.DataSource))].map(
+                (source) => (
+                  <SourceBadge key={source} source={source} />
+                ),
+              )}
+            </div>
           </>
         ) : (
           <Empty>Shows up after your first reading</Empty>
@@ -1848,9 +1896,7 @@ function Progress() {
       <Water />
       <EmbeddedViews>
         <Billing proofOnly />
-        {E.patient(s).consents.band &&
-          s.band.filter((b) => b.patientId === pid && E.visible(b, s)).at(-1)
-            ?.status === "connected" && <Band />}
+        {FEATURES.wellnessBand && <Band />}
       </EmbeddedViews>
     </Shell>
   );
@@ -1905,6 +1951,7 @@ function Records({ initialUpload = false }: { initialUpload?: boolean } = {}) {
         ? labs.map((l) => (
             <Card key={l.id} title="HbA1c">
               <strong className="big-number">{l.value}%</strong>
+              <SourceBadge row={l} />
               <p>
                 {E.date(l.day)} ·{" "}
                 {l.verified
@@ -2351,6 +2398,7 @@ function MyData() {
             <div className="m-row" key={r.id}>
               <span>
                 {r.value} mg/dL · {E.date(r.day)}
+                <SourceBadge row={r} />
               </span>
               <Btn
                 secondary
@@ -2548,6 +2596,7 @@ function Billing({ proofOnly = false }: { proofOnly?: boolean }) {
         {pr.ready ? (
           <>
             <Badge>Synthetic demo · verified lab values</Badge>
+            <SourceBadge row={pr.latest!} source="lab" />
             <div className="a1c-values">
               <strong>{pr.baseline!.value}%</strong>
               <span>→</span>
@@ -2822,34 +2871,31 @@ function Notifications() {
         Mark all read
       </Btn>
       {filtered.length ? (
-        filtered
-          .slice()
-          .reverse()
-          .map((n) => (
-            <button
-              key={n.id}
-              className="notification-card"
-              onClick={() => {
-                mutate((s) => {
-                  s.notifications.find((r) => r.id === n.id)!.read = true;
-                  s.session.patientId = n.patientId;
-                });
-                go(`/${s.session.role}/${n.link || "home"}`);
-              }}
-            >
-              <Bell size={20} />
-              <div>
-                <b>
-                  {n.title} {!n.read && "●"}
-                </b>
-                <p>{n.body}</p>
-                <small>
-                  {E.date(n.day)} {n.time}
-                  {n.delayed ? " · delayed by offline connection" : ""}
-                </small>
-              </div>
-            </button>
-          ))
+        filtered.slice().map((n) => (
+          <button
+            key={n.id}
+            className="notification-card"
+            onClick={() => {
+              mutate((s) => {
+                s.notifications.find((r) => r.id === n.id)!.read = true;
+                s.session.patientId = n.patientId;
+              });
+              go(`/${s.session.role}/${n.link || "home"}`);
+            }}
+          >
+            <Bell size={20} />
+            <div>
+              <b>
+                {n.title} {!n.read && "●"}
+              </b>
+              <p>{n.body}</p>
+              <small>
+                {E.date(n.day)} {n.time}
+                {n.delayed ? " · delayed by offline connection" : ""}
+              </small>
+            </div>
+          </button>
+        ))
       ) : (
         <Empty>No permitted notifications here.</Empty>
       )}
@@ -2885,6 +2931,7 @@ function Caregiver({ alertsOnly = false }: { alertsOnly?: boolean } = {}) {
       <Shell title="Shared safety alerts">
         {alerts.map((a) => (
           <Card key={a.id} title={`Safety ${a.rule}`}>
+            <SourceBadge row={s.readings.find((r) => r.id === a.source)} />
             <p>
               {a.value ?? ""} {a.value ? "mg/dL" : ""} · {a.status} · {a.owner}
             </p>
@@ -2988,6 +3035,7 @@ function Caregiver({ alertsOnly = false }: { alertsOnly?: boolean } = {}) {
           </div>
           {alerts.map((a) => (
             <Card key={a.id} title={`Safety ${a.rule}`}>
+              <SourceBadge row={s.readings.find((r) => r.id === a.source)} />
               <p>
                 {a.value ?? ""} {a.value ? "mg/dL" : ""} · {a.status} ·{" "}
                 {a.owner}
@@ -3102,6 +3150,7 @@ function Caregiver({ alertsOnly = false }: { alertsOnly?: boolean } = {}) {
           {pr?.ready && (
             <Card title="Day-90 Proof">
               <p>
+                <SourceBadge row={pr.latest!} source="lab" />{" "}
                 {pr.baseline!.value}% → {pr.latest!.value}% · change {pr.delta}{" "}
                 points
               </p>
@@ -3741,6 +3790,10 @@ function Registry() {
             </div>
             <span>Day {s.sim.day - p.start}</span>
             <b>{E.proof(s, p.id).latest?.value ?? "—"}%</b>
+            <SourceBadge
+              row={E.proof(s, p.id).latest || undefined}
+              source="lab"
+            />
             <ChevronRight size={18} />
           </button>
         ))}
@@ -3810,6 +3863,7 @@ function DoctorPatient() {
         <div className="m-row" key={r.id}>
           <div>
             <b>{r.title || `HbA1c ${r.value}%`}</b>
+            <SourceBadge row={r} />
             <small>
               {E.date(r.day)} ·{" "}
               {r.verified ? "Verified" : "Unverified — excluded from proof"}
@@ -3960,6 +4014,10 @@ function DoctorPatient() {
                       {pr?.baseline?.value ?? "—"} →{" "}
                       {pr?.ready ? pr.latest!.value : "—"}%
                     </strong>
+                    <SourceBadge
+                      row={pr?.latest || pr?.baseline}
+                      source="lab"
+                    />
                     <p>
                       Verified HbA1c · change {pr?.ready ? pr.delta : "pending"}
                     </p>
@@ -4082,7 +4140,7 @@ function DoctorPatient() {
                       `HbA1c ${node.value}%`}
                   </h3>
                   <p>
-                    Source · {E.date(node.day)} ·{" "}
+                    <SourceBadge row={node} /> {E.date(node.day)} ·{" "}
                     {node.verified ? "Verified" : "Unverified"}
                   </p>
                   {node.verified === false && (
@@ -4135,7 +4193,15 @@ function DoctorPatient() {
                     .join(" ")}
                 />
               </svg>
-              <p>n={fasting.length} · own glucometer</p>
+              <p>n={fasting.length} · mg/dL</p>
+              <SourceBadge row={labs.at(-1)} source="lab" />
+              <div className="source-legend">
+                {[...new Set(fasting.map((r) => r.source as E.DataSource))].map(
+                  (source) => (
+                    <SourceBadge key={source} source={source} />
+                  ),
+                )}
+              </div>
             </Card>
           ) : tab === "records" ? (
             <>
@@ -5085,113 +5151,257 @@ function Impact() {
   );
 }
 function Band() {
-  const { s, mutate, go, askConfirm, askText } = useApp();
+  const { s, mutate, askConfirm } = useApp();
   const p = E.patient(s),
-    r = s.band.filter((b) => b.patientId === p.id && E.visible(b, s)).at(-1);
+    c = s.healthConnect?.[p.id];
+  const [sheet, setSheet] = useState(false);
+  const [permissions, setPermissions] = useState<E.HealthPermissions>(
+    HC.connect(),
+  );
+  const rows = HC.wellness(s, p.id),
+    latest = rows.at(-1);
+  const permitted = c?.permissions || HC.emptyPermissions();
+  const hasBand = HC.PERMISSIONS.some(
+    ([key]) => key !== "bloodGlucose" && permitted[key],
+  );
+  const fresh = HC.freshness(s, c?.lastSync);
+  if (!FEATURES.wellnessBand) return null;
+  const open = () => {
+    setPermissions(HC.connect());
+    setSheet(true);
+  };
+  const line = (
+    <p className="wellness-disclaimer">
+      For wellness trends — not for diagnosis.
+    </p>
+  );
   return (
-    <Shell title="Wellness band">
-      <Card title="Optional demo band">
-        <p>For wellness trends — not for diagnosis</p>
-        <p>This demo simulates band sync. Water is entered manually.</p>
-        {!p.consents.band ? (
-          <Btn onClick={() => go("/patient/privacy")}>
-            Enable optional band consent
-          </Btn>
-        ) : (
-          <>
-            <Badge>
-              {r && s.sim.day - r.day >= 3
-                ? "Stale — reconnect"
-                : r?.status || "not connected"}
-            </Badge>
-            <Btn
-              onClick={() =>
-                mutate((s) => {
-                  if (r) {
-                    const target = s.band.find((b) => b.id === r.id)!;
-                    target.trends = Array.from(
-                      { length: Math.min(7, s.sim.day + 1) },
-                      (_, i) => ({
-                        day: s.sim.day - i,
-                        steps: 3200 + ((s.sim.day - i) % 9) * 240,
-                        sleep: 6.5 + ((s.sim.day - i) % 7) / 10,
-                        heart: 70 + ((s.sim.day - i) % 9),
-                        spo2: 97 + ((s.sim.day - i) % 3),
-                      }),
-                    );
-                    target.status = "connected";
-                    target.day = s.sim.day;
-                    target.time = s.sim.time;
-                  } else
-                    s.band.push({
-                      id: E.uid("BAND"),
-                      patientId: p.id,
-                      ...E.stamp(s),
-                      status: "connected",
-                      trends: Array.from(
-                        { length: Math.min(7, s.sim.day + 1) },
-                        (_, i) => ({
-                          day: s.sim.day - i,
-                          steps: 3200 + ((s.sim.day - i) % 9) * 240,
-                          sleep: 6.5 + ((s.sim.day - i) % 7) / 10,
-                          heart: 70 + ((s.sim.day - i) % 9),
-                          spo2: 97 + ((s.sim.day - i) % 3),
-                        }),
-                      ),
-                    });
-                })
-              }
-            >
-              {r ? "Sync / reconnect" : "Connect demo band"}
+    <Shell title="Health Connect · Demo">
+      {!p.consents.band || !hasBand || !latest ? (
+        <div data-band-card>
+          <Card title="Connect a band (optional) — Pulse works fully without one">
+            <Badge>Demo</Badge>
+            {line}
+            <Btn secondary onClick={open}>
+              Connect Health Connect
             </Btn>
-            {r && (
-              <>
-                <div className="m-grid">
-                  <Card title="Steps">
-                    {r.trends?.[0]?.steps?.toLocaleString("en-IN") || "—"} ·
-                    demo trend
-                  </Card>
-                  <Card title="Sleep">
-                    {r.trends?.[0]?.sleep?.toFixed(1) || "—"} h · demo trend
-                  </Card>
-                  <Card title="Heart rate">
-                    {r.trends?.[0]?.heart || "—"} bpm · wellness only
-                  </Card>
-                  <Card title="SpO₂">
-                    {r.trends?.[0]?.spo2 || "—"}% · wellness only
+          </Card>
+        </div>
+      ) : (
+        <>
+          <div className="m-grid">
+            {(
+              [
+                ["steps", "Steps", latest.steps, "steps"],
+                [
+                  "steps",
+                  "After-dinner steps (19:00–22:30)",
+                  latest.stepsAfterDinner,
+                  "steps",
+                ],
+                ["sleep", "Sleep", latest.sleepMinutes, "min"],
+                ["heartRate", "Resting heart rate", latest.restingHr, "bpm"],
+                ["oxygen", "Oxygen saturation", latest.spo2Min, "%"],
+                [
+                  "hydration",
+                  "Hydration logged elsewhere",
+                  latest.hydrationMl,
+                  "ml",
+                ],
+              ] as const
+            )
+              .filter(([key, , ,]) => permitted[key])
+              .filter(([, , value]) => value !== null)
+              .map(([key, label, value, unit]) => (
+                <div data-band-card key={label}>
+                  <Card title={`${label} · Demo`}>
+                    <strong className="big-number">
+                      {value} {unit}
+                    </strong>
+                    <SourceBadge row={{ ...latest, lastSync: c?.lastSync }} />
+                    {line}
                   </Card>
                 </div>
-                <Btn
-                  secondary
-                  onClick={() =>
-                    mutate((s) => {
-                      s.band.find((b) => b.id === r.id)!.status =
-                        "disconnected";
-                    })
-                  }
-                >
-                  Disconnect
-                </Btn>
-                <Btn
-                  secondary
-                  onClick={async () => {
-                    if (await askConfirm("Delete demo band data?"))
-                      mutate((s) => {
-                        s.band = s.band.filter((b) => b.patientId !== p.id);
-                      });
-                  }}
-                >
-                  Delete band data
-                </Btn>
-              </>
+              ))}
+          </div>
+          <p className={fresh.stale ? "freshness stale" : "freshness"}>
+            {fresh.text}
+            {!c?.connected ? " · disconnected; saved history" : ""}
+          </p>
+        </>
+      )}
+      {c && (
+        <div className="m-actions">
+          <Btn secondary onClick={open}>
+            Review Health Connect permissions
+          </Btn>
+          {c.connected && (
+            <Btn
+              disabled={!s.sim.online}
+              onClick={() =>
+                mutate((s) => HC.sync(s, p.id, FEATURES.meterAutoSync))
+              }
+            >
+              Sync now · Demo
+            </Btn>
+          )}
+          {c.connected && (
+            <Btn
+              secondary
+              onClick={async () => {
+                const remove = await askConfirm(
+                  "Delete past band data too? Choose Confirm to delete, or Cancel to keep history. Clinical glucose readings stay in Records.",
+                );
+                mutate((s) => HC.disconnect(s, remove, p.id));
+              }}
+            >
+              Disconnect Health Connect
+            </Btn>
+          )}
+          {!c.connected && (
+            <Btn
+              secondary
+              onClick={async () => {
+                if (
+                  await askConfirm(
+                    "Delete saved band history? Clinical glucose readings stay in Records.",
+                  )
+                )
+                  mutate((s) => HC.disconnect(s, true, p.id));
+              }}
+            >
+              Delete band history
+            </Btn>
+          )}
+        </div>
+      )}
+      {FEATURES.meterAutoSync && c?.connected && permitted.bloodGlucose && (
+        <p className="m-hint">
+          Meter auto-sync · Demo · Blood glucose only. Your band does not
+          measure glucose.
+        </p>
+      )}
+      {sheet && (
+        <div className="m-overlay hc-overlay" onClick={() => setSheet(false)}>
+          <section
+            className="m-confirm-sheet hc-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Health Connect permissions"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2>Health Connect permissions</h2>
+            <p>Demo — the real app reads Health Connect on Android</p>
+            {HC.PERMISSIONS.filter(
+              ([key]) => key !== "bloodGlucose" || FEATURES.meterAutoSync,
+            ).map(([key, label]) => (
+              <Toggle
+                key={key}
+                label={label}
+                on={permissions[key]}
+                onChange={() =>
+                  setPermissions({ ...permissions, [key]: !permissions[key] })
+                }
+              />
+            ))}
+            <Btn
+              secondary
+              onClick={() =>
+                setPermissions(
+                  Object.fromEntries(
+                    HC.PERMISSIONS.map(([key]) => [
+                      key,
+                      key !== "bloodGlucose" || FEATURES.meterAutoSync,
+                    ]),
+                  ) as E.HealthPermissions,
+                )
+              }
+            >
+              Allow all
+            </Btn>
+            <Toggle
+              label="Optional Pulse wellness consent"
+              on={p.consents.band}
+              onChange={() =>
+                mutate((s) => {
+                  E.patient(s).consents.band = !p.consents.band;
+                  s.consentLog.push({
+                    id: E.uid("CONSENT"),
+                    patientId: p.id,
+                    ...E.stamp(s),
+                    action: "Optional band consent changed",
+                    allowed: !p.consents.band,
+                  });
+                })
+              }
+            />
+            {!p.consents.band && (
+              <p className="m-hint">
+                Band metrics will not be imported without optional wellness
+                consent. Blood glucose can sync independently.
+              </p>
             )}
-          </>
-        )}
-      </Card>
-      <Water />
+            <p className="m-hint">
+              Hydration comes from records you log elsewhere, not from a band
+              sensor. Band metrics never trigger alerts.
+            </p>
+            <div className="m-actions">
+              <Btn
+                disabled={!Object.values(permissions).some(Boolean)}
+                onClick={() => {
+                  mutate((s) => HC.connect(s, permissions, p.id));
+                  setSheet(false);
+                }}
+              >
+                Allow selected
+              </Btn>
+              <Btn secondary onClick={() => setSheet(false)}>
+                Cancel
+              </Btn>
+            </div>
+          </section>
+        </div>
+      )}
     </Shell>
   );
 }
+function SourceBadge({ row, source }: { row?: E.Row; source?: E.DataSource }) {
+  const { s } = useApp();
+  const src = source || row?.source || "typed";
+  const name =
+    src === "band"
+      ? "Band"
+      : src === "lab"
+        ? "Lab"
+        : src === "typed"
+          ? "You"
+          : "Meter";
+  const device = src === "band" || src === "meter-sync";
+  const at = row?.lastSync ?? (row ? E.minutes(row.day, row.time) : null);
+  const fresh = HC.freshness(s, at);
+  const label = device
+    ? fresh.text
+    : row
+      ? `recorded ${Math.max(0, Math.floor((E.now(s) - (row.measuredAt ?? at!)) / 1440))} days ago`
+      : "";
+  return (
+    <small className={`source-badge ${device && fresh.stale ? "stale" : ""}`}>
+      <span aria-hidden="true">
+        {src === "band"
+          ? "◉"
+          : src === "lab"
+            ? "▤"
+            : src === "typed"
+              ? "●"
+              : "▣"}
+      </span>{" "}
+      {name}
+      {label ? ` · ${label}` : ""}
+      {device ? " · Demo" : ""}
+    </small>
+  );
+}
+
 function Utility({ kind }: { kind?: string } = {}) {
   const { s, mutate, go, toast, route, askConfirm, askText } = useApp();
   const page = kind || route.split("?")[0].split("/")[2];
@@ -5925,7 +6135,8 @@ function Demo() {
           ...E.stamp(s),
           value: Number(value),
           verified: true,
-          source: "Demo Diagnostics",
+          source: "lab",
+          provider: "Demo Diagnostics",
         });
       else if (kind === "Revoke Neha")
         s.links
@@ -5940,6 +6151,30 @@ function Demo() {
         });
       else if (kind === "3 missed tablets")
         E.weekly(s, { habitDays: 3, missed: 3, feeling: "tired" });
+      if (kind.startsWith("Band:") || kind.startsWith("Meter auto-sync:")) {
+        if (kind.startsWith("Band:")) E.patient(s).consents.band = true;
+        const permissions = HC.emptyPermissions();
+        if (kind.startsWith("Band:")) {
+          permissions.steps = true;
+          permissions.sleep = true;
+          permissions.heartRate = true;
+          permissions.oxygen = true;
+        } else permissions.bloodGlucose = true;
+        HC.connect(s, permissions, E.P);
+        if (kind === "Band: 3 poor-sleep nights") HC.poorSleep(s);
+        if (kind === "Band: sync gap 3 days") HC.syncGap(s);
+        if (kind.startsWith("Meter auto-sync:"))
+          HC.ingestMeter(
+            s,
+            {
+              id: E.uid("HC-M-DEMO"),
+              value: kind.endsWith("52") ? 52 : 128,
+              context: "fasting",
+              measuredAt: E.now(s),
+            },
+            E.P,
+          );
+      }
       s.session.patientId = oldPid;
     });
     const target = SCENARIOS[kind];
@@ -6221,12 +6456,14 @@ export default function App() {
   const mutate = (f: (s: E.State) => void) => {
     const next = structuredClone(stateRef.current);
     f(next);
+    E.normalizeDeviceState(next);
     stateRef.current = next;
     setState(next);
   };
   const go = (input: string) => {
     const path = resolveRoute(input);
     if (path !== routeRef.current) setLoading(true);
+    else setLoading(false);
     location.hash = `#${path}`;
     setRoute(path);
     window.scrollTo(0, 0);
@@ -6384,6 +6621,20 @@ export default function App() {
       });
     }
   }, [route, s.session.userId, s.session.patientId]);
+  const hcPatient = s.session.patientId,
+    hcConnection = s.healthConnect?.[hcPatient];
+  useEffect(() => {
+    if (FEATURES.wellnessBand || FEATURES.meterAutoSync)
+      mutate((s) => HC.sync(s, hcPatient, FEATURES.meterAutoSync));
+  }, [
+    s.sim.day,
+    s.sim.time,
+    s.sim.online,
+    hcPatient,
+    hcConnection?.connected,
+    JSON.stringify(hcConnection?.permissions),
+    E.patient(s, hcPatient)?.consents.band,
+  ]);
   const launchNav = (key: string) => {
     const map: any = {
       privacy: "/privacy-notice",
@@ -6504,6 +6755,13 @@ export default function App() {
     content = (
       <Shell title="Verification pending">
         <Empty>Patient data and prescribing unlock after verification.</Empty>
+      </Shell>
+    );
+  else if (!featureVisible(page))
+    content = (
+      <Shell title="Today">
+        <Empty>This feature is parked for the demo.</Empty>
+        <Btn onClick={() => go(`/${role}/home`)}>Today</Btn>
       </Shell>
     );
   else if (!pages.includes(page))

@@ -1,0 +1,43 @@
+Verified owned production preview: http://127.0.0.1:5175
+PASS route: /patient/home
+PASS route: /patient/progress
+PASS route: /patient/records
+PASS route: /patient/doctor
+PASS route: /patient/log
+PASS route: /patient/sugar-detective
+PASS route: /patient/mood
+PASS route: /patient/myth
+PASS route: /patient/notes
+PASS route: /patient/family
+PASS route: /patient/billing
+PASS route: /patient/settings
+PASS route: /patient/help
+PASS favicon
+PASS route: /caregiver/home
+PASS route: /caregiver/alerts
+PASS route: /caregiver/notes
+PASS route: /caregiver/billing
+PASS route: /caregiver/connect
+PASS route: /caregiver/family
+PASS route: /caregiver/myth
+PASS route: /caregiver/settings
+PASS route: /caregiver/help
+PASS favicon
+PASS route: /doctor/home
+PASS route: /doctor/patients
+PASS route: /doctor/messages
+PASS route: /doctor/appointments
+PASS route: /doctor/outcomes
+PASS route: /doctor/settings
+PASS route: /doctor/help
+PASS favicon
+PASS route: /team/desk
+PASS route: /team/settings
+PASS route: /team/help
+PASS favicon
+Sweep: 0 failures
+PASS no-band paths: exactly one optional card; keypad/photo available; no water prompt
+PASS permission sheet defaults off; Allow all preserves separate consent; revoked metrics are hidden
+PASS stale amber freshness, disconnect with retained history, and explicit history deletion
+PASS meter-sync 52 reaches S1 support with device timestamp; zero console/runtime errors
+Owned preview stopped

@@ -5,10 +5,13 @@ import { pathToFileURL } from "node:url";
 import ts from "typescript";
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), "pulse-tests-"));
 try {
-  for (const name of ["engine", "selfTests"]) {
+  for (const name of ["engine", "healthConnect", "selfTests"]) {
     let source = fs
       .readFileSync(new URL(`../src/lib/${name}.ts`, import.meta.url), "utf8")
-      .replace(/(["'])\.\/engine\1/g, '"./engine.mjs"');
+      .replace(
+        /(["'])\.\/(engine|healthConnect)\1/g,
+        (_, q, name) => `"./${name}.mjs"`,
+      );
     fs.writeFileSync(
       path.join(temp, `${name}.mjs`),
       ts.transpileModule(source, {

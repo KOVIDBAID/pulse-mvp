@@ -55,3 +55,11 @@ This is targeted hackathon QA, not a production clinical, privacy or accessibili
 - Launch was visually checked in the in-app browser; emergency links, role cards and demo entry points are visible. The preview image is `../pulse-minimal-preview.png`.
 
 The guide automates navigation and simulation day selection. Message entry, safety rechecks, signing and mock UPI approval remain presenter actions; this run verifies all fourteen guide destinations rather than claiming those actions happened automatically.
+
+## Friction and Health Connect pack — 9 October 2026
+
+The friction pack supersedes earlier navigation choices. The first commit records the two failing baseline journeys in `qa/friction-baseline.txt`. The current result in `qa/friction-current.txt` has one expected pending failure: manual fasting entry from Today takes five taps against the four-tap limit. F3–F7 are separate future workflow iterations; the test remains strict. The evening medicine slot takes one tap, automatic meter sync zero daily taps after prior permission setup, caregiver status zero taps after login, and prescription renewal two taps plus PIN.
+
+`qa/health-connect-gates.txt` records typecheck, the expanded rule suite, production build and English-only scan. `qa/health-connect-results.txt` records the visible-route sweep, no-band single-card checks, all-OFF sensor switches, separate wellness consent, hidden denied metrics, hydration provenance, amber stale sync, disconnect/retention/deletion, very-low meter safety, compatibility links, all twelve scenarios and the fourteen-step guided navigation. The final guide step now opens the team queue. Existing click and legacy migration checks also run.
+
+A scenario opened while already on its destination exposed a loading-state issue from the demo's intermediate login navigation. Same-route navigation now clears loading; the sync-gap scenario verifies this path. No safety thresholds, caregiver NEVER categories, physician verification or separate mood consent rules changed.

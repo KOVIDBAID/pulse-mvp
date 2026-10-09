@@ -93,6 +93,22 @@ Patient: Today, Progress, Records, Doctor, with a floating + Log. Family & priva
 
 Caregiver: Home, Alerts, Notes, Payments. Switch family member opens a sheet; Add a report lives in Notes and retains sensitive-document restrictions. Doctor: Today, Patients, Messages, Appointments; the same navigation becomes a sidebar at 900px. Patient profiles have six tabs, with separately consented mood inside Overview. Team: Care desk, Myth review, Impact; the desk contains Queue, Case review and Messages sent.
 
-Legacy hash links redirect to their canonical destination, preserving query parameters. These are screen merges; existing actions and safety/consent checks remain available. Launch offers three role cards, four quick demo identities and fixed emergency phone links. Demo controls expose six identities and eight scenarios; each scenario switches identity and opens its effect.
+Legacy hash links redirect to their canonical destination, preserving query parameters. These are screen merges; existing actions and safety/consent checks remain available. Launch offers three role cards, four quick demo identities and fixed emergency phone links. Demo controls expose six identities and twelve scenarios; each scenario switches identity and opens its effect.
 
-Run the additional Playwright checks with `node qa/run-all.mjs ia`. They cover legacy redirects, merged screens, consented mood visibility, mobile/desktop doctor navigation, all eight scenarios and all fourteen guided steps with console-error checks. Use the same Chromium and port variables described above. Results are in `qa/ia-checks.txt` and `qa/ia-sweep.txt`.
+Run the additional Playwright checks with `node qa/run-all.mjs ia`. They cover legacy redirects, merged screens, consented mood visibility, mobile/desktop doctor navigation, all twelve scenarios and all fourteen guided steps with console-error checks. Use the same Chromium and port variables described above. Results are in `qa/ia-checks.txt` and `qa/ia-sweep.txt`.
+
+## Friction and Health Connect iteration
+
+Every change must respect [docs/FRICTION.md](docs/FRICTION.md). Typed boolean flags in `src/app/features.ts` hide parked UI while retaining the engine rules. Manual water, meal photos, the weekly questionnaire and team outbound navigation are parked. Weight remains under Log → More. The care-team workspace is queue only. A fresh synthetic Ramesh has a prescribed Sugar Detective experiment; unprescribed patients are not offered a new experiment, and past result links still work.
+
+The web connector is **Demo**, not an Android integration. Its Health Connect sheet starts all six sensor permissions OFF and offers Allow all followed by an explicit Allow selected action. Optional Pulse wellness consent is separate and stays off until the patient chooses it. Blood glucose can sync independently of a band. Every saved glucose reading goes through the unchanged glucose/symptom safety engine with a source and device `measuredAt`. Band metrics never enter that engine.
+
+Ramesh has a 90-day synthetic wellness fixture, with five poor-sleep nights, a three-day sync gap around Day 60 and most after-dinner walks after Day 10. Permissioned sync imports elapsed days only. Sushma has no band fixture; each wellness surface shows exactly one optional connection card and keeps keypad/photo glucose entry. Hydration appears only when permissioned Health Connect records supply it. A band does not sense water or glucose.
+
+Source badges distinguish Band, Meter, You and Lab. Sync age turns amber after 72 hours. Disconnect stops ingestion, with an explicit keep/delete choice for band history; clinical glucose readings remain in Records. Reconnecting can import the synthetic history again. No real Health Connect API or background OS service is connected.
+
+Additional scenarios: Band: 3 poor-sleep nights; Band: sync gap 3 days; Meter auto-sync: 52; Meter auto-sync: 128 fasting. The two meter scenarios use device timestamps; 52 opens the existing very-low-sugar support screen.
+
+`pnpm qa:friction` measures actual clicks and typed fields; first-time setup/login is excluded. Its initial immutable before record is `qa/friction-baseline.txt`. The automatic-meter journey uses a fixture representing previously granted glucose permission; it counts all subsequent daily actions. `qa/friction-current.txt` records the current result. Later F3–F7 iterations still need to reduce any over-budget journeys; passing safety gates does not imply all friction budgets are met.
+
+Connector checks: `node qa/run-all.mjs health-connect`. Pure and browser evidence: `qa/health-connect-gates.txt` and `qa/health-connect-results.txt`, using the same browser-path and port environment variables as above.

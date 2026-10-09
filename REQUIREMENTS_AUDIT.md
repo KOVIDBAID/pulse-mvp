@@ -62,3 +62,11 @@ The navigation simplification merges screens without removing their underlying f
 | Team | Care desk / Myth review / Impact; Settings and Help drawer | Care desk contains Queue / Case review / Messages sent. |
 
 Old destinations redirect, including doctor patient-profile links and query-selected appointments, tests, case review and outbound history. Launch and demo controls now match the four-minute walkthrough specification. The guided demo uses fourteen canonical destinations; presenters still perform the actions named by its steps. Automated evidence is retained in `qa/ia-static.txt`, `qa/ia-sweep.txt` and `qa/ia-checks.txt`.
+
+## Friction pack takes precedence
+
+The subsequent friction pack supersedes the minimal-navigation checkpoint where they disagree. Weekly questionnaire, meal photos, manual water and team outbound UI are parked behind typed feature flags; underlying calculations/tests remain. The team sees only its queue in normal navigation and in the final guided step. Manual weight is under More. Sugar Detective creation is offered only for a prescribed synthetic experiment (Ramesh in a fresh seed); legacy completed-result links remain accessible.
+
+Wellness now comes through the simulated Health Connect connector. Six sensor permissions start off; separate optional Pulse wellness consent is still required for band data. The connector imports elapsed synthetic days, keeps denied metrics absent, uses device measuredAt for glucometer readings and the existing safety path, and supports disconnect with history retention/deletion. Ramesh has 90 fixture days; Sushma has none. Hydration is nullable, permissioned and logged elsewhere, never sensed or manually requested in Pulse. Bands never produce alerts. Values show source badges and amber freshness after 72 hours.
+
+The initial friction baseline has two failures: manual reading requires five taps against four, and automatic meter sync did not yet exist. The updated meter path requires no daily taps after permission setup. The manual-entry budget is still deferred to the explicitly identified F3–F7 iterations, rather than changing the test threshold. Medicine-slot and caregiver/doctor budget results are preserved in the evidence files. Safety, privacy, consent and verification rules remain covered by the original tests plus connector tests.

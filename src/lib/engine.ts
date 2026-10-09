@@ -8,12 +8,20 @@ export type HabitId = keyof typeof HABITS;
 export const habitLabel = (id: HabitId | null | undefined) =>
   id ? HABITS[id] || "" : "";
 export type Role = "patient" | "caregiver" | "doctor" | "team";
+export type DataSource =
+  | "band"
+  | "meter-sync"
+  | "meter-photo"
+  | "typed"
+  | "lab";
 export type Row = {
   id: string;
   day: number;
   time: string;
   patientId: string;
   status?: string;
+  source?: DataSource | string;
+  measuredAt?: number;
   [key: string]: any;
 };
 export type Patient = {
@@ -27,10 +35,61 @@ export type Patient = {
   insulin: boolean;
   deleted: boolean;
   habitId: HabitId | null;
+  sugarDetectivePrescribed?: boolean;
   consents: Record<string, boolean>;
   target: number;
   mobile: string;
 };
+export type HealthPermission =
+  | "steps"
+  | "sleep"
+  | "heartRate"
+  | "oxygen"
+  | "hydration"
+  | "bloodGlucose";
+export type HealthPermissions = Record<HealthPermission, boolean>;
+export type HealthConnection = {
+  connected: boolean;
+  permissions: HealthPermissions;
+  lastSync: number | null;
+  syncGapUntil?: number;
+};
+export type WellnessDay = Row & {
+  source: "band";
+  measuredAt: number;
+  steps: number | null;
+  stepsAfterDinner: number | null;
+  sleepMinutes: number | null;
+  restingHr: number | null;
+  spo2Min: number | null;
+  hydrationMl: number | null;
+  lastSync: number | null;
+  imported: boolean;
+};
+export function seedWellness(pid: string): WellnessDay[] {
+  if (pid !== P) return [];
+  return Array.from({ length: 90 }, (_, day) => ({
+    id: `HC-W-${pid}-${day}`,
+    patientId: pid,
+    day,
+    time: "23:00",
+    source: "band",
+    measuredAt: minutes(day, "23:00"),
+    steps: 3100 + ((day * 137) % 3600),
+    stepsAfterDinner:
+      day >= 10 && day % 7 !== 2
+        ? 900 + ((day * 73) % 850)
+        : 120 + ((day * 13) % 220),
+    sleepMinutes: [8, 23, 41, 67, 81].includes(day)
+      ? 255 + (day % 35)
+      : 405 + ((day * 17) % 90),
+    restingHr: 62 + ((day * 7) % 14),
+    spo2Min: 95 + (day % 4),
+    hydrationMl: day % 4 === 0 ? null : 1400 + (day % 5) * 150,
+    lastSync: null,
+    imported: false,
+  }));
+}
 export type State = {
   version: number;
   sim: { day: number; time: string; online: boolean; demoMode: boolean };
@@ -61,6 +120,8 @@ export type State = {
   doses: Row[];
   water: Row[];
   band: Row[];
+  wellness: WellnessDay[];
+  healthConnect: Record<string, HealthConnection>;
   waitlist: Row[];
   grievances: Row[];
   outbound: Row[];
@@ -570,6 +631,8 @@ export function recordReading(s: State, input: any, pid = s.session.patientId) {
     ...stamp(s),
     context: "any",
     symptoms: "",
+    source: "typed",
+    measuredAt: now(s),
     ...input,
     status: s.sim.online ? "synced" : "queued",
   };
@@ -943,6 +1006,8 @@ export function seed(): State {
     doses: [],
     water: [],
     band: [],
+    wellness: seedWellness(P),
+    healthConnect: {},
     waitlist: [],
     grievances: [],
     outbound: [],
@@ -998,6 +1063,7 @@ export function seed(): State {
       inPerson: 0,
       insulin: false,
       deleted: false,
+      sugarDetectivePrescribed: i === 1,
       habitId: i === 1 ? "walk_after_dinner" : null,
       target: 7,
       mobile: i === 1 ? "9876543210" : `987654${String(i).padStart(4, "0")}`,
@@ -1264,7 +1330,7 @@ export function seed(): State {
     "moodChecks",
   ] as const)
     s[key].sort((a, b) => minutes(a.day, a.time) - minutes(b.day, b.time));
-  return s;
+  return normalizeDeviceState(s);
 }
 export function cohort() {
   let n = 7;
@@ -1411,7 +1477,31 @@ export function migrateState(value: any): State {
     };
     const translated = translate(result);
     translated.version = 4;
-    return englishSavedText(translated, result);
+    return normalizeDeviceState(englishSavedText(translated, result));
   }
-  return englishSavedText(result);
+  return normalizeDeviceState(englishSavedText(result));
+}
+
+/** Backfill provenance without changing rules, consent or saved values. */
+export function normalizeDeviceState(s: State): State {
+  s.healthConnect ||= {};
+  s.wellness ||= seedWellness(P);
+  for (const r of s.readings) {
+    r.source ||= "typed";
+    r.measuredAt ??= minutes(r.day, r.time);
+  }
+  for (const r of s.labs) {
+    if (r.source && r.source !== "lab") r.provider ||= r.source;
+    r.source = "lab";
+    r.measuredAt ??= minutes(r.day, r.time);
+  }
+  for (const r of s.water) {
+    r.source ||= "typed";
+    r.measuredAt ??= minutes(r.day, r.time);
+  }
+  for (const r of s.band) {
+    r.source ||= "band";
+    r.measuredAt ??= minutes(r.day, r.time);
+  }
+  return s;
 }

@@ -38,6 +38,26 @@ async function journey(name, role, start, budget, action) {
       s.sim.time = "21:30";
       localStorage.setItem("pulse-demo-v1", JSON.stringify(s));
     }, role);
+    if (name === "automatic meter reading")
+      await page.evaluate(() => {
+        const s = JSON.parse(localStorage.getItem("pulse-demo-v1"));
+        s.healthConnect = {
+          ...(s.healthConnect || {}),
+          ["PUL-KNP-0001"]: {
+            connected: true,
+            permissions: {
+              steps: false,
+              sleep: false,
+              heartRate: false,
+              oxygen: false,
+              hydration: false,
+              bloodGlucose: true,
+            },
+            lastSync: null,
+          },
+        };
+        localStorage.setItem("pulse-demo-v1", JSON.stringify(s));
+      });
     await page.reload();
     await page.goto(base + "/#" + start);
     await page.waitForTimeout(350);

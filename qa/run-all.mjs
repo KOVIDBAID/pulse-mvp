@@ -12,7 +12,14 @@ const names = process.argv.slice(2);
 if (
   names.some(
     (name) =>
-      !["sweep", "clicks", "migration", "ia", "friction"].includes(name),
+      ![
+        "sweep",
+        "clicks",
+        "migration",
+        "ia",
+        "friction",
+        "health-connect",
+      ].includes(name),
   )
 )
   throw new Error("Unknown QA script");

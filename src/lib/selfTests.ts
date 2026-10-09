@@ -1,4 +1,5 @@
 import * as E from "./engine";
+import * as HC from "./healthConnect";
 export function selfTests() {
   const results: {
     group: string;
@@ -578,6 +579,189 @@ export function selfTests() {
         m.instruction.startsWith("Instruction needs clinician review") &&
         m._legacyText.instruction ===
           old.prescriptions[0].medicines[0].instruction
+      );
+    },
+  );
+
+  test("Health Connect", "Permission sheet defaults all off", true, () =>
+    Object.values(HC.connect()).every((v) => v === false),
+  );
+  test(
+    "Health Connect",
+    "Extreme band SpO2 and HR never create alerts",
+    0,
+    () => {
+      const s = E.seed();
+      const before = s.alerts.length;
+      HC.recordWellness(s, {
+        ...E.seedWellness(E.P)[0],
+        spo2Min: 82,
+        restingHr: 140,
+        imported: true,
+      });
+      return s.alerts.length - before;
+    },
+  );
+  test("Health Connect", "Meter-sync 52 creates S1", "S1", () => {
+    const s = E.seed();
+    s.healthConnect[E.P] = {
+      connected: true,
+      permissions: { ...HC.emptyPermissions(), bloodGlucose: true },
+      lastSync: null,
+    };
+    return HC.ingestMeter(s, {
+      id: "TEST-METER-LOW",
+      value: 52,
+      measuredAt: E.now(s),
+    })?.rule;
+  });
+  test(
+    "Health Connect",
+    "Stale meter-sync uses device time and follows S0",
+    "S0",
+    () => {
+      const s = E.seed();
+      s.healthConnect[E.P] = {
+        connected: true,
+        permissions: { ...HC.emptyPermissions(), bloodGlucose: true },
+        lastSync: null,
+      };
+      return HC.ingestMeter(s, {
+        id: "TEST-METER-OLD",
+        value: 52,
+        measuredAt: E.now(s) - 420,
+      })?.rule;
+    },
+  );
+  test(
+    "Health Connect",
+    "Denied glucose and disconnected devices cannot ingest",
+    true,
+    () => {
+      const s = E.seed();
+      const n = s.readings.length;
+      HC.connect(s, HC.emptyPermissions());
+      HC.ingestMeter(s, { id: "DENIED", value: 52, measuredAt: E.now(s) });
+      HC.disconnect(s);
+      HC.ingestMeter(s, { id: "STOPPED", value: 52, measuredAt: E.now(s) });
+      return s.readings.length === n;
+    },
+  );
+  test(
+    "Health Connect",
+    "Ramesh has 90 varied synthetic days, Sushma none",
+    true,
+    () => {
+      const s = E.seed(),
+        w = s.wellness;
+      return (
+        w.length === 90 &&
+        !w.some((r) => r.patientId === "PUL-KNP-0002") &&
+        w.filter((r) => (r.sleepMinutes ?? 999) < 300).length === 5
+      );
+    },
+  );
+  test(
+    "Health Connect",
+    "Sync imports only elapsed days and leaves three-day gap",
+    true,
+    () => {
+      const s = E.seed();
+      s.sim.day = 60;
+      E.patient(s).consents.band = true;
+      HC.connect(s, { ...HC.emptyPermissions(), steps: true, sleep: true });
+      return HC.wellness(s).every(
+        (r) => r.measuredAt <= E.now(s) && ![59, 60, 61].includes(r.day),
+      );
+    },
+  );
+  test(
+    "Health Connect",
+    "Repeated sync does not duplicate meter readings",
+    true,
+    () => {
+      const s = E.seed();
+      HC.connect(s, { ...HC.emptyPermissions(), bloodGlucose: true });
+      const n = s.readings.length;
+      HC.sync(s);
+      HC.sync(s);
+      return s.readings.length === n;
+    },
+  );
+  test(
+    "Health Connect",
+    "Disconnect stops importing; delete removes wellness history",
+    true,
+    () => {
+      const s = E.seed();
+      E.patient(s).consents.band = true;
+      HC.connect(s, { ...HC.emptyPermissions(), steps: true });
+      HC.disconnect(s, true);
+      HC.sync(s);
+      return (
+        !s.healthConnect[E.P].connected &&
+        !s.wellness.some((r) => r.patientId === E.P)
+      );
+    },
+  );
+  test(
+    "Health Connect",
+    "Wellness consent remains off when sensor permissions are granted",
+    true,
+    () => {
+      const s = E.seed();
+      HC.connect(s, { ...HC.emptyPermissions(), steps: true });
+      return !E.patient(s).consents.band && HC.wellness(s).length === 0;
+    },
+  );
+  test("Health Connect", "Freshness becomes amber at 72 hours", true, () => {
+    const s = E.seed();
+    return (
+      HC.freshness(s, E.now(s) - 4320).stale &&
+      !HC.freshness(s, E.now(s) - 4319).stale
+    );
+  });
+  test(
+    "Health Connect",
+    "Denied hydration and HR stay absent from imported data",
+    true,
+    () => {
+      const s = E.seed();
+      E.patient(s).consents.band = true;
+      HC.connect(s, { ...HC.emptyPermissions(), steps: true });
+      return HC.wellness(s).every(
+        (r) =>
+          r.hydrationMl === null &&
+          r.restingHr === null &&
+          r.sleepMinutes === null,
+      );
+    },
+  );
+  test(
+    "Health Connect",
+    "Reconnecting after deletion imports permitted synthetic history",
+    true,
+    () => {
+      const s = E.seed();
+      E.patient(s).consents.band = true;
+      HC.connect(s, { ...HC.emptyPermissions(), steps: true });
+      HC.disconnect(s, true);
+      HC.connect(s, { ...HC.emptyPermissions(), sleep: true });
+      return (
+        HC.wellness(s).length > 0 &&
+        HC.wellness(s).every((r) => r.steps === null && r.sleepMinutes !== null)
+      );
+    },
+  );
+  test(
+    "features",
+    "Only Ramesh has the seeded prescribed experiment",
+    true,
+    () => {
+      const s = E.seed();
+      return (
+        E.patient(s, E.P).sugarDetectivePrescribed === true &&
+        !E.patient(s, "PUL-KNP-0002").sugarDetectivePrescribed
       );
     },
   );

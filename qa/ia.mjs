@@ -133,14 +133,16 @@ try {
       assert.equal(await page.locator(".doctor-bottom").isVisible(), false);
     }
     if (role === "team") {
+      await page.setViewportSize({ width: 1000, height: 800 });
       await route(page, "/team/desk");
-      assert.deepEqual(await page.getByRole("tab").allTextContents(), [
-        "Queue",
-        "Case review",
-        "Messages sent",
-      ]);
-      for (const name of ["Case review", "Messages sent", "Queue"])
-        await page.getByRole("tab", { name, exact: true }).click();
+      assert.equal(await page.getByRole("tab").count(), 0);
+      assert.equal(
+        await page
+          .locator(".m-sidebar")
+          .getByRole("button", { name: "Care desk", exact: true })
+          .count(),
+        1,
+      );
     }
     await context.close();
   }
@@ -168,7 +170,7 @@ try {
     await context.close();
   }
   console.log(
-    "PASS all 8 scenarios switch identity and open their destination",
+    `PASS all ${Object.keys(config.SCENARIOS).length} scenarios switch identity and open their destination`,
   );
   const { context, page } = await fresh();
   await page.getByRole("button", { name: "DEMO", exact: true }).click();

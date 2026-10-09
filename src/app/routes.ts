@@ -213,7 +213,7 @@ export const GUIDE: [string, Role, string, number][] = [
   ],
   ["Ramesh’s Day-90 Proof Card", "patient", "proof", 90],
   ["Amit renews using mock UPI", "caregiver", "billing", 90],
-  ["Pooja shows synthetic impact", "team", "impact", 90],
+  ["Pooja reviews the support queue", "team", "desk", 90],
 ];
 export const SCENARIOS: Record<
   string,
@@ -228,6 +228,10 @@ export const SCENARIOS: Record<
     ["Payment failed", "caregiver", "CG-0001", "billing"],
     ["Caregiver request", "patient", "PUL-KNP-0001", "family"],
     ["Lab result", "patient", "PUL-KNP-0001", "records"],
+    ["Band: 3 poor-sleep nights", "patient", "PUL-KNP-0001", "progress"],
+    ["Band: sync gap 3 days", "patient", "PUL-KNP-0001", "progress"],
+    ["Meter auto-sync: 52", "patient", "PUL-KNP-0001", "safety"],
+    ["Meter auto-sync: 128 fasting", "patient", "PUL-KNP-0001", "home"],
   ].map(([label, role, userId, path]) => [
     label,
     { role: role as Role, userId, path },
