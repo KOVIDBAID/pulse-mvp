@@ -271,7 +271,7 @@ function Shell({ children, title }: { children: ReactNode; title: string }) {
               (item) =>
                 featureVisible(item.path.split("?")[0]) &&
                 (item.path !== "sugar-detective" ||
-                  !!p?.sugarDetectivePrescribed),
+                  !!p?.testingPlan.experiment),
             )
             .map((item) => (
               <button
@@ -754,6 +754,10 @@ function PatientHome() {
       E.visible(a, s) &&
       s.sim.day - a.day < 7,
   );
+  const passiveW3 = s.supportTasks.find(
+    (t) =>
+      t.patientId === p.id && t.id.startsWith("PASSIVE-W3-") && E.visible(t, s),
+  );
   const active = s.alerts.filter(
     (a) =>
       a.patientId === p.id &&
@@ -793,7 +797,7 @@ function PatientHome() {
             </div>
           </Card>
         ))}
-      {w3 && (
+      {(w3 || passiveW3) && (
         <Card title="A lighter week">
           <p>
             Just one small step: {E.habitLabel(p.habitId)}. The Pulse care team
@@ -822,6 +826,21 @@ function PatientHome() {
       )}
       <DoseList pid={p.id} />
       {FEATURES.wellnessBand && <YourDay />}
+      <Card title="Your testing plan">
+        <p>{E.planLabel(p)}</p>
+        <p>
+          {p.testingPlan.setBy === "starter"
+            ? "Starter plan — your doctor can change it"
+            : `Set by Dr. Verma on ${E.date(p.testingPlan.setOn)}`}
+        </p>
+        {E.nextTest(s) && (
+          <p>
+            {E.TEST_LABEL[E.nextTest(s)!.slot]} ·{" "}
+            {E.nextTest(s)!.day === s.sim.day ? "today" : "tomorrow"}{" "}
+            {E.nextTest(s)!.time}
+          </p>
+        )}
+      </Card>
       <Card title={pr.ready ? "Your effort, in numbers" : "Your next step"}>
         {pr.ready ? (
           <p>
@@ -833,7 +852,7 @@ function PatientHome() {
           <p>Find out what your habit does in six evenings.</p>
         )}
         {(pr.ready ||
-          (FEATURES.sugarDetective && p.sugarDetectivePrescribed)) && (
+          (FEATURES.sugarDetective && p.testingPlan.experiment)) && (
           <Btn
             onClick={() => go(pr.ready ? "/patient/proof" : "/patient/jasoos")}
           >
@@ -1317,7 +1336,9 @@ function Sprint() {
   const pid = E.patient(s).id;
   const list = s.sprints.filter((r) => r.patientId === pid && E.visible(r, s));
   const [selected, setSelected] = useState(list.at(-1)?.id || "");
-  const [habitId, setHabitId] = useState<string>(habits[0][0]);
+  const [habitId, setHabitId] = useState<string>(
+    E.patient(s).testingPlan.experiment?.habitId || habits[0][0],
+  );
   const [before, setBefore] = useState("");
   const [after, setAfter] = useState("");
   const [fasting, setFasting] = useState("");
@@ -1337,12 +1358,17 @@ function Sprint() {
         <h1>Your meter. Your proof.</h1>
         <p>6 evenings · A / B / A / B / A / B · about 12 strips</p>
       </div>
-      {!p.consents.sprint || p.insulin ? (
+      {!FEATURES.sugarDetective ||
+      !p.testingPlan.experiment ||
+      !p.consents.sprint ||
+      p.insulin ? (
         <Card title="Sprint unavailable">
           <p>
             {p.insulin
               ? "Doctor-supervised mode: experiments are disabled. Safety remains available."
-              : "Turn on optional sprint consent first."}
+              : !p.testingPlan.experiment
+                ? "Your doctor has not prescribed an experiment. Off-plan readings remain available."
+                : "Turn on optional sprint consent first."}
           </p>
           <Btn onClick={() => go("/patient/privacy")}>Consent</Btn>
         </Card>
@@ -1362,12 +1388,13 @@ function Sprint() {
               label="Doctor-approved habit"
               value={habitId}
               onChange={setHabitId}
-              options={habits}
+              options={habits.filter(
+                ([id]) => id === p.testingPlan.experiment?.habitId,
+              )}
             />
             <Btn
               disabled={
-                !FEATURES.sugarDetective ||
-                !E.patient(s).sugarDetectivePrescribed
+                !FEATURES.sugarDetective || !E.patient(s).testingPlan.experiment
               }
               onClick={() => {
                 mutate((s) => {
@@ -1489,6 +1516,39 @@ function Sprint() {
                     onChange={setArm}
                     options={["A", "B"]}
                   />
+                  {sp.habitId === "walk_after_dinner" &&
+                    (DS.hasBand(s, pid) ? (
+                      <p>
+                        Walk verified automatically from band:{" "}
+                        {DS.walk(s, pid, s.sim.day).done
+                          ? "✓"
+                          : "Waiting for 1,500 steps between dinner and the check"}
+                      </p>
+                    ) : (
+                      <Btn
+                        secondary
+                        onClick={() =>
+                          mutate((s) => {
+                            if (
+                              !s.walks.some(
+                                (r) =>
+                                  r.patientId === pid && r.day === s.sim.day,
+                              )
+                            )
+                              s.walks.push({
+                                id: E.uid("WALK"),
+                                patientId: pid,
+                                ...E.stamp(s),
+                                source: "typed",
+                                measuredAt: E.now(s),
+                                value: 1,
+                              });
+                          })
+                        }
+                      >
+                        I walked
+                      </Btn>
+                    ))}
                   <Field
                     label="Before dinner mg/dL"
                     type="number"
@@ -1554,6 +1614,8 @@ function Sprint() {
                           before: Number(before),
                           after: Number(after),
                           fasting: fasting ? Number(fasting) : null,
+                          walkVerified: DS.walk(s, pid, s.sim.day).done,
+                          walkSource: DS.walk(s, pid, s.sim.day).source,
                         });
                         E.recordReading(s, {
                           value: Number(before),
@@ -2992,6 +3054,14 @@ function Caregiver({ alertsOnly = false }: { alertsOnly?: boolean } = {}) {
     );
   return (
     <Shell title="Family care">
+      {E.allow(s, user, pid, "tests") && (
+        <Card title="Testing summary">
+          <p>
+            Tests this week: {E.testingAdherence(s, pid).done} of{" "}
+            {E.testingAdherence(s, pid).due} done
+          </p>
+        </Card>
+      )}
       <div className="family-switch">
         {members.map((l) => (
           <button
@@ -4012,7 +4082,9 @@ function DoctorPatient() {
                   <p>From band · wellness only · Demo</p>
                   <p>{DS.summary(s, pid)}</p>
                   <p>
-                    Band adherence: {DS.week(s, pid).bandDays}/7 days with data
+                    Band adherence: {DS.week(s, pid).bandDays}/7 days · Testing
+                    adherence: {E.testingAdherence(s, pid).done}/
+                    {E.testingAdherence(s, pid).due} with data
                   </p>
                 </Card>
               )}
@@ -4050,6 +4122,14 @@ function DoctorPatient() {
                 <p>
                   Descriptive auto-summary from computed patient and lab values.
                   Verify before acting. No dose advice.
+                </p>
+              </Card>
+              <Card title="Testing plan">
+                <p>{E.planLabel(p)}</p>
+                <p>
+                  Testing adherence: {E.testingAdherence(s, pid).done}/
+                  {E.testingAdherence(s, pid).due} · Band adherence:{" "}
+                  {DS.week(s, pid).bandDays}/7 days
                 </p>
               </Card>
               <Card title="What worked">
@@ -4311,6 +4391,7 @@ function Rx() {
             duration: m.duration || 90,
           })),
           advice: "",
+          testingPlan: structuredClone(p.testingPlan),
         },
   );
   const [pin, setPin] = useState("");
@@ -4379,6 +4460,162 @@ function Rx() {
               value={draft.diagnosis}
               onChange={(v: string) => setDraft({ ...draft, diagnosis: v })}
             />
+            <Card title="Testing plan">
+              <Select
+                label="Testing preset"
+                value=""
+                options={[
+                  ["", "Choose preset"],
+                  ["three", "3 fasting a week"],
+                  ["daily", "Daily fasting"],
+                  ["plus", "Fasting + 1 after-dinner a week"],
+                  ["custom", "Custom"],
+                ]}
+                onChange={(v: string) =>
+                  setDraft({
+                    ...draft,
+                    testingPlan: {
+                      ...(draft.testingPlan || p.testingPlan),
+                      schedule:
+                        v === "custom"
+                          ? (draft.testingPlan || p.testingPlan).schedule
+                          : [
+                              {
+                                slot: "fasting",
+                                days:
+                                  v === "daily"
+                                    ? [0, 1, 2, 3, 4, 5, 6]
+                                    : [1, 3, 5],
+                              },
+                              ...(v === "plus"
+                                ? [{ slot: "2h-after-dinner", days: [0] }]
+                                : []),
+                            ],
+                    },
+                  })
+                }
+              />
+              {(draft.testingPlan || p.testingPlan).schedule.map(
+                (item: any, i: number) => (
+                  <div key={i}>
+                    <Select
+                      label={`Test slot ${i + 1}`}
+                      value={item.slot}
+                      options={Object.entries(E.TEST_LABEL)}
+                      onChange={(slot: string) =>
+                        setDraft({
+                          ...draft,
+                          testingPlan: {
+                            ...(draft.testingPlan || p.testingPlan),
+                            schedule: (
+                              draft.testingPlan || p.testingPlan
+                            ).schedule.map((x: any, j: number) =>
+                              j === i ? { ...x, slot } : x,
+                            ),
+                          },
+                        })
+                      }
+                    />
+                    <div className="m-actions">
+                      {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
+                        (label, d) => (
+                          <Toggle
+                            key={d}
+                            label={`${label} · slot ${i + 1}`}
+                            on={item.days.includes(d)}
+                            onChange={() =>
+                              setDraft({
+                                ...draft,
+                                testingPlan: {
+                                  ...(draft.testingPlan || p.testingPlan),
+                                  schedule: (
+                                    draft.testingPlan || p.testingPlan
+                                  ).schedule.map((x: any, j: number) =>
+                                    j === i
+                                      ? {
+                                          ...x,
+                                          days: x.days.includes(d)
+                                            ? x.days.filter(
+                                                (v: number) => v !== d,
+                                              )
+                                            : [...x.days, d],
+                                        }
+                                      : x,
+                                  ),
+                                },
+                              })
+                            }
+                          />
+                        ),
+                      )}
+                    </div>
+                  </div>
+                ),
+              )}
+              <Btn
+                secondary
+                onClick={() =>
+                  setDraft({
+                    ...draft,
+                    testingPlan: {
+                      ...(draft.testingPlan || p.testingPlan),
+                      schedule: [
+                        ...(draft.testingPlan || p.testingPlan).schedule,
+                        { slot: "bedtime", days: [0] },
+                      ],
+                    },
+                  })
+                }
+              >
+                Add test slot
+              </Btn>
+              <Toggle
+                label="Prescribe Sugar Detective (6 evenings, about 12 extra strips)"
+                on={!!(draft.testingPlan || p.testingPlan).experiment}
+                onChange={() =>
+                  setDraft({
+                    ...draft,
+                    testingPlan: {
+                      ...(draft.testingPlan || p.testingPlan),
+                      experiment: (draft.testingPlan || p.testingPlan)
+                        .experiment
+                        ? undefined
+                        : {
+                            habitId: "walk_after_dinner",
+                            evenings: 6,
+                            approvedBy: s.session.userId,
+                            approvedOn: s.sim.day,
+                          },
+                    },
+                  })
+                }
+              />
+              {(draft.testingPlan || p.testingPlan).experiment && (
+                <Select
+                  label="Prescribed habit"
+                  value={
+                    (draft.testingPlan || p.testingPlan).experiment.habitId
+                  }
+                  options={habits}
+                  onChange={(habitId: string) =>
+                    setDraft({
+                      ...draft,
+                      testingPlan: {
+                        ...(draft.testingPlan || p.testingPlan),
+                        experiment: {
+                          ...(draft.testingPlan || p.testingPlan).experiment,
+                          habitId,
+                        },
+                      },
+                    })
+                  }
+                />
+              )}
+              <p>
+                Signed with this prescription. Off-plan readings are always
+                accepted.
+              </p>
+            </Card>
             {draft.medicines.map((m: any, i: number) => (
               <div className="rx-edit" key={i}>
                 <h3>Medicine {i + 1}</h3>
@@ -4529,6 +4766,12 @@ function Rx() {
                         .filter((r) => r.patientId === pid)
                         .map((r) => r.version),
                     ) + 1;
+                  E.setTestingPlan(
+                    s,
+                    pid,
+                    draft.testingPlan || p.testingPlan,
+                    s.session.userId,
+                  );
                   s.prescriptions.push({
                     id: E.uid("RX"),
                     patientId: pid,
@@ -4708,6 +4951,28 @@ function Desk() {
   const staffed = s.sim.time >= "08:00" && s.sim.time < "22:00";
   return (
     <Shell title={caseReview ? "Case review" : "Care desk"}>
+      {s.supportTasks
+        .filter((t) => E.visible(t, s) && t.status !== "resolved")
+        .map((t) => (
+          <Card key={t.id} title="Lighter-week support">
+            <p>
+              {E.patient(s, t.patientId).name} · {t.habitDays}/7 walks ·{" "}
+              <SourceBadge source={t.source as E.DataSource} /> · Wellness
+              support
+            </p>
+            <Btn
+              secondary
+              onClick={() =>
+                mutate((s) => {
+                  s.supportTasks.find((x) => x.id === t.id)!.status =
+                    "resolved";
+                })
+              }
+            >
+              Complete support call
+            </Btn>
+          </Card>
+        ))}
       <div className="m-hero">
         <h1>{caseReview ? "Dr. R. Menon · demo review" : "Care desk queue"}</h1>
         <p>
@@ -4958,6 +5223,17 @@ function Impact() {
   const doctor = s.session.role === "doctor";
   return (
     <Shell title={doctor ? "Practice outcomes" : "Impact console"}>
+      <Card title="Week-3 passive habit metric · Demo">
+        {s.patients.slice(0, 2).map((p) => (
+          <p key={p.id}>
+            {p.name}: {DS.week(s, p.id, p.start + 20).walks}/7 days ·{" "}
+            {DS.week(s, p.id, p.start + 20).walks >= 4
+              ? "Kept habit"
+              : "Support offered"}{" "}
+            · <SourceBadge source={DS.week(s, p.id, p.start + 20).source} />
+          </p>
+        ))}
+      </Card>
       <div className="m-hero">
         <h1>Measured change, sustainable care</h1>
         <p>Synthetic demo cohort — illustrative, not real results</p>
@@ -5740,6 +6016,7 @@ function Auth({ role }: { role: E.Role }) {
         insulin,
         deleted: false,
         habitId: null,
+        testingPlan: { ...E.starterPlan(), setOn: s.sim.day },
         bandOwned,
         payerId: id,
         consents: { ...consents, sprint: !!consents.sprint && meter },

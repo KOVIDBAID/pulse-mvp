@@ -761,8 +761,8 @@ export function selfTests() {
     () => {
       const s = E.seed();
       return (
-        E.patient(s, E.P).sugarDetectivePrescribed === true &&
-        !E.patient(s, "PUL-KNP-0002").sugarDetectivePrescribed
+        !!E.patient(s, E.P).testingPlan.experiment &&
+        !E.patient(s, "PUL-KNP-0002").testingPlan.experiment
       );
     },
   );
@@ -815,5 +815,72 @@ export function selfTests() {
       return DS.value(s, "glucose")?.value === 52;
     },
   );
+  test("plan", "Off-plan low retains S1 safety", true, () => {
+    const s = E.seed();
+    s.sim.day = 89;
+    return E.recordReading(s, { value: 52, context: "any" }).rule === "S1";
+  });
+  test("plan", "Verified plan change replaces future reminders", true, () => {
+    const s = E.seed();
+    E.rebuildTestReminders(s, E.P);
+    E.setTestingPlan(
+      s,
+      E.P,
+      {
+        ...E.starterPlan(),
+        schedule: [{ slot: "bedtime", days: [0, 1, 2, 3, 4, 5, 6] }],
+      },
+      "DR-0001",
+    );
+    return s.notifications
+      .filter(
+        (n) =>
+          n.id.startsWith("TEST-PLAN-") && E.minutes(n.day, n.time) >= E.now(s),
+      )
+      .every((n) => n.id.endsWith("bedtime"));
+  });
+  test(
+    "plan",
+    "Unprescribed experiment absent on no-band patient",
+    true,
+    () => !E.patient(E.seed(), "PUL-KNP-0002").testingPlan.experiment,
+  );
+  test(
+    "plan",
+    "Band and tap walks produce identical leading results",
+    true,
+    () => {
+      const a = E.seed(),
+        b = E.seed();
+      E.patient(a).consents.band = true;
+      HC.connect(a, { ...HC.emptyPermissions(), steps: true });
+      for (let d = 14; d <= 20; d++) {
+        const done = d < 18;
+        const r = a.wellness.find((r) => r.day === d)!;
+        r.stepsAfterDinner = done ? 1600 : 0;
+        r.imported = true;
+        if (done)
+          b.walks.push({
+            id: `walk-${d}`,
+            patientId: E.P,
+            day: d,
+            time: "21:00",
+            measuredAt: E.minutes(d, "21:00"),
+            source: "typed",
+            value: 1,
+          });
+      }
+      return DS.week(a, E.P, 20).walks === 4 && DS.week(b, E.P, 20).walks === 4;
+    },
+  );
+  test("plan", "Off-plan days do not enter testing denominator", true, () => {
+    const s = E.seed();
+    s.sim.day = 90;
+    s.sim.time = "08:00";
+    s.readings = [];
+    E.recordReading(s, { value: 128, context: "fasting" });
+    const a = E.testingAdherence(s);
+    return a.done === 1 && a.due === 4;
+  });
   return results;
 }

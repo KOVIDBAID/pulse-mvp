@@ -1,3 +1,4 @@
+import * as DS from "./dataSources";
 export const HABITS = {
   walk_after_dinner: "10-minute walk after dinner",
   veg_dal_first: "Vegetables and dal first, roti last",
@@ -25,6 +26,66 @@ export type Row = {
   measuredAt?: number;
   [key: string]: any;
 };
+export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+export type TestSlot =
+  | "fasting"
+  | "before-meal"
+  | "2h-after-dinner"
+  | "bedtime";
+export type TestingPlan = {
+  schedule: { slot: TestSlot; days: Weekday[] }[];
+  experiment?: {
+    habitId: HabitId;
+    evenings: 6;
+    approvedBy: string;
+    approvedOn: number;
+  };
+  setBy: string;
+  setOn: number;
+  away?: boolean;
+};
+export const TEST_TIMES: Record<TestSlot, string> = {
+  fasting: "07:30",
+  "before-meal": "19:00",
+  "2h-after-dinner": "21:30",
+  bedtime: "22:00",
+};
+export const TEST_CONTEXT: Record<TestSlot, string> = {
+  fasting: "fasting",
+  "before-meal": "before",
+  "2h-after-dinner": "after",
+  bedtime: "bedtime",
+};
+export const TEST_LABEL: Record<TestSlot, string> = {
+  fasting: "Fasting check",
+  "before-meal": "Before-meal check",
+  "2h-after-dinner": "2-hour after-dinner check",
+  bedtime: "Bedtime check",
+};
+export function starterPlan(): TestingPlan {
+  return {
+    schedule: [{ slot: "fasting", days: [1, 3, 5] }],
+    setBy: "starter",
+    setOn: 0,
+  };
+}
+export function seededPlan(): TestingPlan {
+  return {
+    ...starterPlan(),
+    schedule: [
+      { slot: "fasting", days: [1, 3, 5] },
+      { slot: "2h-after-dinner", days: [0] },
+    ],
+    setBy: "DR-0001",
+    setOn: 0,
+    experiment: {
+      habitId: "walk_after_dinner",
+      evenings: 6,
+      approvedBy: "DR-0001",
+      approvedOn: 0,
+    },
+  };
+}
 export type Patient = {
   id: string;
   name: string;
@@ -36,7 +97,7 @@ export type Patient = {
   insulin: boolean;
   deleted: boolean;
   habitId: HabitId | null;
-  sugarDetectivePrescribed?: boolean;
+  testingPlan: TestingPlan;
   bandOwned?: boolean;
   payerId?: string;
   largeText?: boolean;
@@ -124,6 +185,7 @@ export type State = {
   consentLog: Row[];
   doses: Row[];
   water: Row[];
+  supportTasks: Row[];
   metrics: Row[];
   walks: Row[];
   band: Row[];
@@ -732,6 +794,16 @@ export function validateRx(draft: any, doctor: any, p: Patient) {
     )
   )
     errors.push("Complete every medicine row");
+  if (
+    draft.testingPlan &&
+    draft.testingPlan.schedule.some(
+      (x: any) =>
+        !(x.slot in TEST_TIMES) ||
+        !x.days.length ||
+        x.days.some((d: number) => d < 0 || d > 6),
+    )
+  )
+    errors.push("Choose a valid testing slot and at least one day");
   if (draft.mode !== "in-clinic" && p.inPerson === null)
     errors.push(
       "A recorded prior in-person consultation is required for chronic follow-up medicines",
@@ -796,6 +868,108 @@ export function proof(s: State, pid: string) {
       patient(s, pid).target,
     ),
   };
+}
+export function planSlots(s: State, pid: string, from: number, to: number) {
+  const p = patient(s, pid),
+    plan = p.testingPlan || starterPlan();
+  const rows: { day: number; time: string; slot: TestSlot; done: boolean }[] =
+    [];
+  for (let d = Math.max(p.start, plan.setOn, from); d <= to; d++)
+    for (const item of plan.schedule) {
+      if (!item.days.includes(((d + 6) % 7) as Weekday)) continue;
+      const time = TEST_TIMES[item.slot];
+      rows.push({
+        day: d,
+        time,
+        slot: item.slot,
+        done: s.readings.some(
+          (r) =>
+            r.patientId === pid &&
+            Math.floor((r.measuredAt ?? minutes(r.day, r.time)) / 1440) === d &&
+            r.context === TEST_CONTEXT[item.slot] &&
+            visible(r, s),
+        ),
+      });
+    }
+  return rows.sort((a, b) => minutes(a.day, a.time) - minutes(b.day, b.time));
+}
+export function nextTest(s: State, pid = s.session.patientId) {
+  return planSlots(s, pid, s.sim.day, s.sim.day + 7).find(
+    (r) =>
+      !r.done && (r.day > s.sim.day || minutes(r.day, r.time) >= now(s) - 120),
+  );
+}
+export function testingAdherence(
+  s: State,
+  pid = s.session.patientId,
+  end = s.sim.day,
+) {
+  const start = end - ((end + 6) % 7); // Sunday to Saturday, elapsed prescribed slots only.
+  const slots = planSlots(s, pid, start, end).filter(
+    (r) => minutes(r.day, r.time) <= now(s),
+  );
+  return { done: slots.filter((r) => r.done).length, due: slots.length };
+}
+export function rebuildTestReminders(s: State, pid: string) {
+  s.notifications = s.notifications.filter(
+    (n) =>
+      !(
+        n.patientId === pid &&
+        n.id.startsWith("TEST-PLAN-") &&
+        minutes(n.day, n.time) >= now(s)
+      ),
+  );
+  for (const r of planSlots(s, pid, s.sim.day, s.sim.day + 7))
+    if (!r.done && minutes(r.day, r.time) >= now(s)) {
+      const prev = s.sim;
+      s.sim = { ...prev, day: r.day, time: r.time };
+      notify(
+        s,
+        pid,
+        pid,
+        "tests",
+        TEST_LABEL[r.slot],
+        "Your prescribed check is due",
+        `TEST-PLAN-${pid}-${r.day}-${r.slot}`,
+        "home",
+      );
+      s.sim = prev;
+    }
+}
+export function setTestingPlan(
+  s: State,
+  pid: string,
+  plan: TestingPlan,
+  doctorId: string,
+) {
+  if (!s.doctors[doctorId]?.verified)
+    throw new Error("Verified doctor required");
+  if (
+    plan.schedule.some(
+      (x) =>
+        !(x.slot in TEST_TIMES) ||
+        !x.days.length ||
+        x.days.some((d) => d < 0 || d > 6),
+    )
+  )
+    throw new Error("Invalid testing schedule");
+  patient(s, pid).testingPlan = {
+    ...structuredClone(plan),
+    setBy: doctorId,
+    setOn: s.sim.day,
+    experiment: plan.experiment
+      ? { ...plan.experiment, approvedBy: doctorId, approvedOn: s.sim.day }
+      : undefined,
+  };
+  rebuildTestReminders(s, pid);
+}
+export function planLabel(p: Patient) {
+  return p.testingPlan.schedule
+    .map(
+      (x) =>
+        `${TEST_LABEL[x.slot]} · ${x.days.map((d) => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d]).join("/")}`,
+    )
+    .join("; ");
 }
 export function advance(s: State, day: number, time: string) {
   const target = minutes(day, time);
@@ -915,6 +1089,22 @@ export function advance(s: State, day: number, time: string) {
             }
           }
         }
+      for (const r of planSlots(s, p.id, d, d))
+        if (d >= day - 6 && !r.done && minutes(d, r.time) <= target) {
+          const prev = s.sim;
+          s.sim = { ...prev, day: d, time: r.time };
+          notify(
+            s,
+            p.id,
+            p.id,
+            "tests",
+            TEST_LABEL[r.slot],
+            "Your prescribed check is due",
+            `TEST-PLAN-${p.id}-${d}-${r.slot}`,
+            "home",
+          );
+          s.sim = prev;
+        }
       const key = `DIGEST-${p.id}-${d}`;
       if (
         d % 7 === 1 &&
@@ -941,6 +1131,29 @@ export function advance(s: State, day: number, time: string) {
       }
     }
   for (const p of s.patients.filter((p) => !p.deleted)) {
+    if (
+      day >= p.start + 22 &&
+      day < p.start + 29 &&
+      p.habitId === "walk_after_dinner"
+    ) {
+      const w = DS.week(s, p.id, p.start + 20),
+        id = `PASSIVE-W3-${p.id}`;
+      if (w.walks < 4 && !s.scheduled.includes(id)) {
+        s.scheduled.push(id);
+        s.supportTasks.push({
+          id,
+          patientId: p.id,
+          ...stamp(s),
+          type: "W3",
+          status: "open",
+          title: "Lighter-week support",
+          reason: "Fewer than four walks in Week 3",
+          habitDays: w.walks,
+          source: w.source,
+          owner: "Care team",
+        });
+      }
+    }
     const activity = [...s.readings, ...s.weeklyChecks, ...s.messages].filter(
       (r) => r.patientId === p.id && visible(r, s),
     );
@@ -1012,6 +1225,7 @@ export function seed(): State {
     consentLog: [],
     doses: [],
     water: [],
+    supportTasks: [],
     metrics: [],
     walks: [],
     band: [],
@@ -1072,7 +1286,7 @@ export function seed(): State {
       inPerson: 0,
       insulin: false,
       deleted: false,
-      sugarDetectivePrescribed: i === 1,
+      testingPlan: i === 1 ? seededPlan() : starterPlan(),
       bandOwned: i === 1 ? true : false,
       payerId: i === 1 ? "CG-0001" : id,
       habitId: i === 1 ? "walk_after_dinner" : null,
@@ -1496,9 +1710,15 @@ export function migrateState(value: any): State {
 /** Backfill provenance without changing rules, consent or saved values. */
 export function normalizeDeviceState(s: State): State {
   s.healthConnect ||= {};
+  s.supportTasks ||= [];
   s.metrics ||= [];
   s.walks ||= [];
   s.wellness ||= seedWellness(P);
+  for (const p of s.patients) {
+    p.testingPlan ||= p.id === P ? seededPlan() : starterPlan();
+    delete (p as any).sugarDetectivePrescribed;
+    p.largeText ??= p.age >= 55;
+  }
   for (const r of s.readings) {
     r.source ||= "typed";
     r.measuredAt ??= minutes(r.day, r.time);

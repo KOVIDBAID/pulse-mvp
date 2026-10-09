@@ -74,3 +74,7 @@ The initial friction baseline has two failures: manual reading requires five tap
 ## Band-primary checkpoint
 
 The central data-source policy, recommended connection step, device settings, wellness summaries and consent-gated doctor/caregiver band context are implemented. Existing safety rules remain glucose/symptom-only. 92 rule checks, typecheck, build and route sweep pass. The strict manual-reading friction gate still reports 5/4 taps; the following calm-Today checkpoint must resolve this without changing the budget.
+
+## Prescribed testing checkpoint
+
+Typed testing plans, starter/doctor seeds, prescription signing controls, plan reminder rebuilding, caregiver aggregate testing adherence, prescription-only Sugar Detective and passive walk metrics are implemented. Low walk adherence queues wellness support, never a clinical band alert. 97 rule checks, typecheck, build and route sweep pass; the existing manual-reading friction failure remains for the next checkpoint.
