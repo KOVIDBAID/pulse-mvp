@@ -1,0 +1,95 @@
+[
+  {
+    "session": {
+      "role": "patient",
+      "userId": "PUL-KNP-0001",
+      "patientId": "PUL-KNP-0001"
+    },
+    "routes": [
+      "/patient/home",
+      "/patient/log",
+      "/patient/jasoos",
+      "/patient/weekly",
+      "/patient/mood",
+      "/patient/crisis",
+      "/patient/safety",
+      "/patient/progress",
+      "/patient/medicines",
+      "/patient/records",
+      "/patient/notes",
+      "/patient/privacy",
+      "/patient/my-data",
+      "/patient/billing",
+      "/patient/proof",
+      "/patient/doctor",
+      "/patient/messages",
+      "/patient/appointments",
+      "/patient/tests",
+      "/patient/myth",
+      "/patient/notifications",
+      "/patient/band",
+      "/patient/settings",
+      "/patient/profile",
+      "/patient/help"
+    ]
+  },
+  {
+    "session": {
+      "role": "caregiver",
+      "userId": "CG-0001",
+      "patientId": "PUL-KNP-0001"
+    },
+    "routes": [
+      "/caregiver/home",
+      "/caregiver/care",
+      "/caregiver/choose",
+      "/caregiver/connect",
+      "/caregiver/permissions",
+      "/caregiver/alerts",
+      "/caregiver/billing",
+      "/caregiver/records",
+      "/caregiver/notes",
+      "/caregiver/myth",
+      "/caregiver/notifications",
+      "/caregiver/profile",
+      "/caregiver/help"
+    ]
+  },
+  {
+    "session": {
+      "role": "doctor",
+      "userId": "DR-0001",
+      "patientId": "PUL-KNP-0001"
+    },
+    "routes": [
+      "/doctor/home",
+      "/doctor/patients",
+      "/doctor/patient",
+      "/doctor/appointments",
+      "/doctor/messages",
+      "/doctor/outcomes",
+      "/doctor/notifications",
+      "/doctor/profile",
+      "/doctor/settings",
+      "/doctor/help"
+    ]
+  },
+  {
+    "session": {
+      "role": "team",
+      "userId": "TEAM",
+      "patientId": "PUL-KNP-0001"
+    },
+    "routes": [
+      "/team/home",
+      "/team/desk",
+      "/team/case-review",
+      "/team/myths",
+      "/team/impact",
+      "/team/outbound",
+      "/team/notifications",
+      "/team/profile",
+      "/team/help"
+    ]
+  }
+]

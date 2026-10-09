@@ -1,117 +1,264 @@
-Baseline checkpoint: original version-3 product behavior.
-Working copy: outputs/pulse-mvp
-No Git repository or supplied QA scripts were present in this workspace.
-Playwright Chromium installed with PLAYWRIGHT_BROWSERS_PATH=/tmp/pulse-playwright-browsers.
-Favicon HTTP check: http://127.0.0.1:5174/favicon.svg returned 200 image/svg+xml and the requested SVG.
+Before English-only conversion. Install, typecheck, 62/62 rule tests and build passed at the imported checkpoint.
 
-Already up to date
-Done in 1s using pnpm v11.25.0
-
-   ╭──────────────────────────────────────────────────────────────────────╮
-   │                                                                      │
-   │                 Update available! 11.25.0 → 12.10.1.                 │
-   │                 Changelog: https://pnpm.io/v/12.10.1                 │
-   │   To update, run: curl -fsSL https://get.pnpm.io/install.sh | sh -   │
-   │                                                                      │
-   ╰──────────────────────────────────────────────────────────────────────╯
-
-$ tsc --noEmit
-$ node tests/run.mjs
-PASS clock: Day 90 = 9 Oct 2026
-PASS safety: 52 fresh
-PASS safety: Meter LO
-PASS safety: 64 fresh
-PASS safety: Repeat low in 24h
-PASS safety: Stale 52 measured 7h ago
-PASS safety: High 320
-PASS safety: Two fasting readings under 80
-PASS safety: Normal 120
-PASS text: Hindi crisis
-PASS text: Hinglish cardiac
-PASS text: No crisis for ordinary heat complaint
-PASS mood: PHQ-9 item 9 positive
-PASS mood: PHQ-9 total 12
-PASS mood: PHQ-2 total 2
-PASS sprint: Walk effect and consistency
-PASS sprint: Food effect computed from data
-PASS sprint: Insufficient A evenings
-PASS sprint: Effect below 15
-PASS privacy: CG-0001 → mood
-PASS privacy: CG-0001 → alerts
-PASS privacy: CG-0002 → medicines
-PASS privacy: LOCAL → readings
-PASS privacy: DR-0001 → mood
-PASS privacy: DR-0002 → readings
-PASS privacy: Sensitive upload hidden from uploader
-PASS privacy: Caregiver receives no forbidden records
-PASS privacy: Revocation takes immediate effect
-PASS privacy: Deleted patient inaccessible
-PASS cycle: Guarantee excludes −0.7 change
-PASS cycle: Guarantee for weak change with 8 checks
-PASS cycle: Sushma qualifies for Maintenance
-PASS cycle: No future follow-up lab at day 3
-PASS cycle: 13 weekly checks at day 90
-PASS cycle: Unverified lab excluded
-PASS rx: Unverified doctor blocked
-PASS rx: Audio chronic follow-up needs prior in-person
-PASS myth: Stop medicine claim
-PASS myth: Walk after dinner
-PASS myth: Cricket
-PASS myth: Unknown health claim
-PASS injector: Low notifies permitted caregivers
-PASS injector: Crisis excludes caregiver recipients
-PASS injector: Private crisis sends no alerts
-PASS injector: Offline low runs safety and queues SMS
-PASS injector: Offline contact sends on reconnect
-PASS injector: No recheck after 20 sim-minutes escalates
-PASS injector: Fresh normal recheck resolves low
-PASS injector: Time advance is idempotent
-PASS injector: Time travel preserves records but hides future
-PASS notify: Quiet hours blocks proactive nudge
-PASS notify: Safety bypasses quiet hours
-PASS metrics: Numerator cannot exceed denominator
-PASS metrics: Seeded cohort is deterministic
-PASS privacy: Weekly summary has no mood feeling
-PASS privacy: Caregiver alert projection excludes mood and clinic-only flags
-PASS offline: Remote caregiver cannot see an undelivered offline low
-PASS offline: Reconnection makes the low available to caregiver
-PASS privacy: Future family approval is hidden
-PASS rx: Negative medicine duration is blocked
-PASS sprint: Missed plan extends by at most two evenings
-PASS metrics: All clinics exist in each monthly cohort
-
-62/62 checks passed
-$ vite build
-vite v8.0.5 building client environment for production...
-[2K
-transforming...✓ 1908 modules transformed.
-rendering chunks...
-computing gzip size...
-dist/index.html                   0.57 kB │ gzip:   0.37 kB
-dist/assets/index-DOP9lN0x.css  109.34 kB │ gzip:  21.20 kB
-dist/assets/index-8kYZZvXj.js   366.97 kB │ gzip: 113.85 kB
-
-✓ built in 879ms
 $ node qa/no-devanagari.mjs
-node:internal/modules/cjs/loader:1520
-  throw err;
-  ^
-
-Error: Cannot find module '/home/snorlax-xd/Documents/Codex/2026-10-09/b/outputs/pulse-mvp/qa/no-devanagari.mjs'
-    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)
-    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)
-    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)
-    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)
-    at Module._load (node:internal/modules/cjs/loader:1294:5)
-    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
-    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
-    at node:internal/main/run_main_module:33:47 {
-  code: 'MODULE_NOT_FOUND',
-  requireStack: []
-}
-
-Node.js v24.19.0
+Devanagari: src/App.tsx:195
+Devanagari: src/App.tsx:196
+Devanagari: src/App.tsx:197
+Devanagari: src/App.tsx:198
+Devanagari: src/App.tsx:339
+Devanagari: src/App.tsx:344
+Devanagari: src/App.tsx:440
+Devanagari: src/App.tsx:442
+Devanagari: src/App.tsx:444
+Devanagari: src/App.tsx:445
+Devanagari: src/App.tsx:454
+Devanagari: src/App.tsx:455
+Devanagari: src/App.tsx:458
+Devanagari: src/App.tsx:505
+Devanagari: src/App.tsx:507
+Devanagari: src/App.tsx:508
+Devanagari: src/App.tsx:509
+Devanagari: src/App.tsx:517
+Devanagari: src/App.tsx:520
+Devanagari: src/App.tsx:526
+Devanagari: src/App.tsx:527
+Devanagari: src/App.tsx:532
+Devanagari: src/App.tsx:589
+Devanagari: src/App.tsx:597
+Devanagari: src/App.tsx:636
+Devanagari: src/App.tsx:668
+Devanagari: src/App.tsx:670
+Devanagari: src/App.tsx:673
+Devanagari: src/App.tsx:704
+Devanagari: src/App.tsx:705
+Devanagari: src/App.tsx:728
+Devanagari: src/App.tsx:736
+Devanagari: src/App.tsx:742
+Devanagari: src/App.tsx:770
+Devanagari: src/App.tsx:824
+Devanagari: src/App.tsx:846
+Devanagari: src/App.tsx:855
+Devanagari: src/App.tsx:858
+Devanagari: src/App.tsx:883
+Devanagari: src/App.tsx:888
+Devanagari: src/App.tsx:889
+Devanagari: src/App.tsx:890
+Devanagari: src/App.tsx:891
+Devanagari: src/App.tsx:892
+Devanagari: src/App.tsx:913
+Devanagari: src/App.tsx:970
+Devanagari: src/App.tsx:971
+Devanagari: src/App.tsx:972
+Devanagari: src/App.tsx:973
+Devanagari: src/App.tsx:974
+Devanagari: src/App.tsx:997
+Devanagari: src/App.tsx:1039
+Devanagari: src/App.tsx:1133
+Devanagari: src/App.tsx:1135
+Devanagari: src/App.tsx:1173
+Devanagari: src/App.tsx:1174
+Devanagari: src/App.tsx:1175
+Devanagari: src/App.tsx:1176
+Devanagari: src/App.tsx:1200
+Devanagari: src/App.tsx:1257
+Devanagari: src/App.tsx:1264
+Devanagari: src/App.tsx:1267
+Devanagari: src/App.tsx:1288
+Devanagari: src/App.tsx:1310
+Devanagari: src/App.tsx:1375
+Devanagari: src/App.tsx:1474
+Devanagari: src/App.tsx:1503
+Devanagari: src/App.tsx:1504
+Devanagari: src/App.tsx:1505
+Devanagari: src/App.tsx:1513
+Devanagari: src/App.tsx:1514
+Devanagari: src/App.tsx:1515
+Devanagari: src/App.tsx:1516
+Devanagari: src/App.tsx:1530
+Devanagari: src/App.tsx:1540
+Devanagari: src/App.tsx:1567
+Devanagari: src/App.tsx:1667
+Devanagari: src/App.tsx:1716
+Devanagari: src/App.tsx:2563
+Devanagari: src/App.tsx:2606
+Devanagari: src/App.tsx:2608
+Devanagari: src/App.tsx:2610
+Devanagari: src/App.tsx:2613
+Devanagari: src/App.tsx:2621
+Devanagari: src/App.tsx:2899
+Devanagari: src/App.tsx:4164
+Devanagari: src/App.tsx:4165
+Devanagari: src/App.tsx:4166
+Devanagari: src/App.tsx:4167
+Devanagari: src/App.tsx:4198
+Devanagari: src/App.tsx:4609
+Devanagari: src/App.tsx:4919
+Devanagari: src/App.tsx:5245
+Devanagari: src/App.tsx:5708
+Devanagari: src/App.tsx:5714
+Devanagari: src/App.tsx:6322
+Devanagari: src/App.tsx:6323
+Devanagari: src/Launch.tsx:146
+Devanagari: src/Launch.tsx:180
+Devanagari: src/Launch.tsx:191
+Devanagari: src/Launch.tsx:193
+Devanagari: src/Launch.tsx:196
+Devanagari: src/Launch.tsx:197
+Devanagari: src/Launch.tsx:201
+Devanagari: src/Launch.tsx:204
+Devanagari: src/Launch.tsx:225
+Devanagari: src/Launch.tsx:228
+Devanagari: src/Launch.tsx:232
+Devanagari: src/Launch.tsx:235
+Devanagari: src/Launch.tsx:240
+Devanagari: src/Launch.tsx:245
+Devanagari: src/Launch.tsx:248
+Devanagari: src/Launch.tsx:257
+Devanagari: src/Launch.tsx:259
+Devanagari: src/Launch.tsx:260
+Devanagari: src/Launch.tsx:340
+Devanagari: src/Launch.tsx:342
+Devanagari: src/Launch.tsx:354
+Devanagari: src/content/hi.json:2
+Devanagari: src/content/hi.json:3
+Devanagari: src/content/hi.json:4
+Devanagari: src/content/hi.json:5
+Devanagari: src/content/hi.json:6
+Devanagari: src/content/hi.json:7
+Devanagari: src/content/hi.json:8
+Devanagari: src/content/hi.json:9
+Devanagari: src/content/hi.json:10
+Devanagari: src/content/hi.json:11
+Devanagari: src/content/hi.json:12
+Devanagari: src/content/hi.json:13
+Devanagari: src/content/hi.json:14
+Devanagari: src/content/hi.json:15
+Devanagari: src/content/hi.json:16
+Devanagari: src/content/hi.json:17
+Devanagari: src/content/hi.json:18
+Devanagari: src/content/hi.json:19
+Devanagari: src/content/hi.json:20
+Devanagari: src/content/hi.json:21
+Devanagari: src/content/hi.json:22
+Devanagari: src/content/hi.json:23
+Devanagari: src/content/hi.json:24
+Devanagari: src/content/hi.json:25
+Devanagari: src/content/hi.json:26
+Devanagari: src/content/hi.json:27
+Devanagari: src/content/hi.json:28
+Devanagari: src/content/hi.json:29
+Devanagari: src/content/hi.json:30
+Devanagari: src/content/hi.json:31
+Devanagari: src/content/hi.json:32
+Devanagari: src/content/hi.json:33
+Devanagari: src/content/hi.json:34
+Devanagari: src/content/hi.json:35
+Devanagari: src/content/hi.json:36
+Devanagari: src/content/hi.json:37
+Devanagari: src/content/hi.json:38
+Devanagari: src/content/hi.json:39
+Devanagari: src/content/hi.json:40
+Devanagari: src/content/hi.json:41
+Devanagari: src/content/hi.json:42
+Devanagari: src/content/hi.json:43
+Devanagari: src/content/hi.json:44
+Devanagari: src/content/hi.json:45
+Devanagari: src/content/hi.json:46
+Devanagari: src/content/hi.json:47
+Devanagari: src/content/hi.json:48
+Devanagari: src/content/hi.json:49
+Devanagari: src/content/hi.json:50
+Devanagari: src/content/hi.json:51
+Devanagari: src/content/hi.json:52
+Devanagari: src/content/hi.json:53
+Devanagari: src/content/hi.json:54
+Devanagari: src/content/hi.json:55
+Devanagari: src/content/hi.json:56
+Devanagari: src/content/hi.json:57
+Devanagari: src/content/hi.json:58
+Devanagari: src/content/hi.json:59
+Devanagari: src/content/hi.json:60
+Devanagari: src/content/hi.json:61
+Devanagari: src/content/hi.json:62
+Devanagari: src/content/hi.json:63
+Devanagari: src/content/hi.json:64
+Devanagari: src/content/hi.json:65
+Devanagari: src/content/hi.json:66
+Devanagari: src/content/hi.json:67
+Devanagari: src/content/hi.json:68
+Devanagari: src/content/hi.json:69
+Devanagari: src/content/hi.json:70
+Devanagari: src/content/hi.json:71
+Devanagari: src/content/hi.json:72
+Devanagari: src/content/hi.json:73
+Devanagari: src/content/hi.json:74
+Devanagari: src/content/hi.json:75
+Devanagari: src/content/hi.json:76
+Devanagari: src/content/hi.json:77
+Devanagari: src/content/hi.json:78
+Devanagari: src/content/hi.json:79
+Devanagari: src/content/hi.json:80
+Devanagari: src/content/hi.json:81
+Devanagari: src/content/hi.json:82
+Devanagari: src/content/hi.json:83
+Devanagari: src/content/hi.json:84
+Devanagari: src/content/hi.json:85
+Devanagari: src/content/hi.json:86
+Devanagari: src/content/hi.json:87
+Devanagari: src/content/hi.json:88
+Devanagari: src/content/hi.json:89
+Devanagari: src/content/hi.json:90
+Devanagari: src/content/hi.json:91
+Devanagari: src/content/hi.json:92
+Devanagari: src/content/hi.json:93
+Devanagari: src/content/hi.json:94
+Devanagari: src/content/hi.json:95
+Devanagari: src/content/hi.json:96
+Devanagari: src/content/hi.json:97
+Devanagari: src/content/hi.json:98
+Devanagari: src/content/hi.json:99
+Devanagari: src/content/hi.json:100
+Devanagari: src/content/hi.json:101
+Devanagari: src/content/hi.json:102
+Devanagari: src/content/hi.json:103
+Devanagari: src/content/hi.json:104
+Devanagari: src/content/hi.json:105
+Devanagari: src/content/hi.json:106
+Devanagari: src/lib/engine.ts:95
+Devanagari: src/lib/engine.ts:102
+Devanagari: src/lib/engine.ts:109
+Devanagari: src/lib/engine.ts:161
+Devanagari: src/lib/engine.ts:162
+Devanagari: src/lib/engine.ts:163
+Devanagari: src/lib/engine.ts:164
+Devanagari: src/lib/engine.ts:165
+Devanagari: src/lib/engine.ts:166
+Devanagari: src/lib/engine.ts:167
+Devanagari: src/lib/engine.ts:168
+Devanagari: src/lib/engine.ts:169
+Devanagari: src/lib/engine.ts:170
+Devanagari: src/lib/engine.ts:184
+Devanagari: src/lib/engine.ts:185
+Devanagari: src/lib/engine.ts:192
+Devanagari: src/lib/engine.ts:193
+Devanagari: src/lib/engine.ts:203
+Devanagari: src/lib/engine.ts:204
+Devanagari: src/lib/engine.ts:205
+Devanagari: src/lib/engine.ts:206
+Devanagari: src/lib/engine.ts:644
+Devanagari: src/lib/engine.ts:647
+Devanagari: src/lib/engine.ts:650
+Devanagari: src/lib/engine.ts:652
+Devanagari: src/lib/engine.ts:795
+Devanagari: src/lib/engine.ts:968
+Devanagari: src/lib/engine.ts:1107
+Devanagari: src/lib/engine.ts:1108
+Devanagari: src/lib/engine.ts:1156
+Devanagari: src/lib/engine.ts:1164
+Devanagari: src/lib/selfTests.ts:67
+255 lines outside the allowlist
 [ELIFECYCLE] Command failed with exit code 1.
+
 $ pnpm build && node qa/run-all.mjs sweep
 $ vite build
 vite v8.0.5 building client environment for production...
@@ -123,23 +270,67 @@ dist/index.html                   0.57 kB │ gzip:   0.37 kB
 dist/assets/index-DOP9lN0x.css  109.34 kB │ gzip:  21.20 kB
 dist/assets/index-8kYZZvXj.js   366.97 kB │ gzip: 113.85 kB
 
-✓ built in 690ms
-node:internal/modules/cjs/loader:1520
-  throw err;
-  ^
-
-Error: Cannot find module '/home/snorlax-xd/Documents/Codex/2026-10-09/b/outputs/pulse-mvp/qa/run-all.mjs'
-    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)
-    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)
-    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)
-    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)
-    at Module._load (node:internal/modules/cjs/loader:1294:5)
-    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
-    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
-    at node:internal/main/run_main_module:33:47 {
-  code: 'MODULE_NOT_FOUND',
-  requireStack: []
-}
-
-Node.js v24.19.0
+✓ built in 766ms
+Devanagari: /patient/home
+Devanagari: /patient/log
+Devanagari: /patient/jasoos
+Devanagari: /patient/weekly
+Devanagari: /patient/mood
+Devanagari: /patient/crisis
+Devanagari: /patient/safety
+Devanagari: /patient/progress
+Devanagari: /patient/medicines
+Devanagari: /patient/records
+Devanagari: /patient/notes
+Devanagari: /patient/privacy
+Devanagari: /patient/my-data
+Devanagari: /patient/billing
+Devanagari: /patient/proof
+Devanagari: /patient/doctor
+Devanagari: /patient/messages
+Devanagari: /patient/appointments
+Devanagari: /patient/tests
+Devanagari: /patient/myth
+Devanagari: /patient/notifications
+Devanagari: /patient/band
+Devanagari: /patient/settings
+Devanagari: /patient/profile
+Devanagari: /patient/help
+PASS favicon
+Devanagari: /caregiver/home
+Devanagari: /caregiver/care
+Devanagari: /caregiver/choose
+Devanagari: /caregiver/connect
+Devanagari: /caregiver/permissions
+PASS route: /caregiver/alerts
+Devanagari: /caregiver/billing
+Devanagari: /caregiver/records
+Devanagari: /caregiver/notes
+Devanagari: /caregiver/myth
+Devanagari: /caregiver/notifications
+Devanagari: /caregiver/profile
+Devanagari: /caregiver/help
+PASS favicon
+Devanagari: /doctor/home
+Devanagari: /doctor/patients
+Devanagari: /doctor/patient
+Devanagari: /doctor/appointments
+Devanagari: /doctor/messages
+Devanagari: /doctor/outcomes
+Devanagari: /doctor/notifications
+Devanagari: /doctor/profile
+Devanagari: /doctor/settings
+Devanagari: /doctor/help
+PASS favicon
+Devanagari: /team/home
+Devanagari: /team/desk
+Devanagari: /team/case-review
+Devanagari: /team/myths
+Devanagari: /team/impact
+Devanagari: /team/outbound
+Devanagari: /team/notifications
+Devanagari: /team/profile
+Devanagari: /team/help
+PASS favicon
+Sweep: 56 failures
 [ELIFECYCLE] Command failed with exit code 1.
