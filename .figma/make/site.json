@@ -1,0 +1,12 @@
+{
+  "title": "Pulse — अपना मीटर, अपना सच",
+  "description": "A continuous-care app for adults with Type 2 diabetes in Kanpur, offering personalized health tracking, caregiver support, and real-time safety alerts.",
+  "language": "hi",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

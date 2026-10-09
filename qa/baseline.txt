@@ -1,0 +1,145 @@
+Baseline checkpoint: original version-3 product behavior.
+Working copy: outputs/pulse-mvp
+No Git repository or supplied QA scripts were present in this workspace.
+Playwright Chromium installed with PLAYWRIGHT_BROWSERS_PATH=/tmp/pulse-playwright-browsers.
+Favicon HTTP check: http://127.0.0.1:5174/favicon.svg returned 200 image/svg+xml and the requested SVG.
+
+Already up to date
+Done in 1s using pnpm v11.25.0
+
+   ╭──────────────────────────────────────────────────────────────────────╮
+   │                                                                      │
+   │                 Update available! 11.25.0 → 12.10.1.                 │
+   │                 Changelog: https://pnpm.io/v/12.10.1                 │
+   │   To update, run: curl -fsSL https://get.pnpm.io/install.sh | sh -   │
+   │                                                                      │
+   ╰──────────────────────────────────────────────────────────────────────╯
+
+$ tsc --noEmit
+$ node tests/run.mjs
+PASS clock: Day 90 = 9 Oct 2026
+PASS safety: 52 fresh
+PASS safety: Meter LO
+PASS safety: 64 fresh
+PASS safety: Repeat low in 24h
+PASS safety: Stale 52 measured 7h ago
+PASS safety: High 320
+PASS safety: Two fasting readings under 80
+PASS safety: Normal 120
+PASS text: Hindi crisis
+PASS text: Hinglish cardiac
+PASS text: No crisis for ordinary heat complaint
+PASS mood: PHQ-9 item 9 positive
+PASS mood: PHQ-9 total 12
+PASS mood: PHQ-2 total 2
+PASS sprint: Walk effect and consistency
+PASS sprint: Food effect computed from data
+PASS sprint: Insufficient A evenings
+PASS sprint: Effect below 15
+PASS privacy: CG-0001 → mood
+PASS privacy: CG-0001 → alerts
+PASS privacy: CG-0002 → medicines
+PASS privacy: LOCAL → readings
+PASS privacy: DR-0001 → mood
+PASS privacy: DR-0002 → readings
+PASS privacy: Sensitive upload hidden from uploader
+PASS privacy: Caregiver receives no forbidden records
+PASS privacy: Revocation takes immediate effect
+PASS privacy: Deleted patient inaccessible
+PASS cycle: Guarantee excludes −0.7 change
+PASS cycle: Guarantee for weak change with 8 checks
+PASS cycle: Sushma qualifies for Maintenance
+PASS cycle: No future follow-up lab at day 3
+PASS cycle: 13 weekly checks at day 90
+PASS cycle: Unverified lab excluded
+PASS rx: Unverified doctor blocked
+PASS rx: Audio chronic follow-up needs prior in-person
+PASS myth: Stop medicine claim
+PASS myth: Walk after dinner
+PASS myth: Cricket
+PASS myth: Unknown health claim
+PASS injector: Low notifies permitted caregivers
+PASS injector: Crisis excludes caregiver recipients
+PASS injector: Private crisis sends no alerts
+PASS injector: Offline low runs safety and queues SMS
+PASS injector: Offline contact sends on reconnect
+PASS injector: No recheck after 20 sim-minutes escalates
+PASS injector: Fresh normal recheck resolves low
+PASS injector: Time advance is idempotent
+PASS injector: Time travel preserves records but hides future
+PASS notify: Quiet hours blocks proactive nudge
+PASS notify: Safety bypasses quiet hours
+PASS metrics: Numerator cannot exceed denominator
+PASS metrics: Seeded cohort is deterministic
+PASS privacy: Weekly summary has no mood feeling
+PASS privacy: Caregiver alert projection excludes mood and clinic-only flags
+PASS offline: Remote caregiver cannot see an undelivered offline low
+PASS offline: Reconnection makes the low available to caregiver
+PASS privacy: Future family approval is hidden
+PASS rx: Negative medicine duration is blocked
+PASS sprint: Missed plan extends by at most two evenings
+PASS metrics: All clinics exist in each monthly cohort
+
+62/62 checks passed
+$ vite build
+vite v8.0.5 building client environment for production...
+[2K
+transforming...✓ 1908 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.57 kB │ gzip:   0.37 kB
+dist/assets/index-DOP9lN0x.css  109.34 kB │ gzip:  21.20 kB
+dist/assets/index-8kYZZvXj.js   366.97 kB │ gzip: 113.85 kB
+
+✓ built in 879ms
+$ node qa/no-devanagari.mjs
+node:internal/modules/cjs/loader:1520
+  throw err;
+  ^
+
+Error: Cannot find module '/home/snorlax-xd/Documents/Codex/2026-10-09/b/outputs/pulse-mvp/qa/no-devanagari.mjs'
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)
+    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)
+    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)
+    at Module._load (node:internal/modules/cjs/loader:1294:5)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v24.19.0
+[ELIFECYCLE] Command failed with exit code 1.
+$ pnpm build && node qa/run-all.mjs sweep
+$ vite build
+vite v8.0.5 building client environment for production...
+[2K
+transforming...✓ 1908 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.57 kB │ gzip:   0.37 kB
+dist/assets/index-DOP9lN0x.css  109.34 kB │ gzip:  21.20 kB
+dist/assets/index-8kYZZvXj.js   366.97 kB │ gzip: 113.85 kB
+
+✓ built in 690ms
+node:internal/modules/cjs/loader:1520
+  throw err;
+  ^
+
+Error: Cannot find module '/home/snorlax-xd/Documents/Codex/2026-10-09/b/outputs/pulse-mvp/qa/run-all.mjs'
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)
+    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)
+    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)
+    at Module._load (node:internal/modules/cjs/loader:1294:5)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v24.19.0
+[ELIFECYCLE] Command failed with exit code 1.

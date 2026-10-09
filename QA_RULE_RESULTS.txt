@@ -1,0 +1,64 @@
+PASS clock: Day 90 = 9 Oct 2026
+PASS safety: 52 fresh
+PASS safety: Meter LO
+PASS safety: 64 fresh
+PASS safety: Repeat low in 24h
+PASS safety: Stale 52 measured 7h ago
+PASS safety: High 320
+PASS safety: Two fasting readings under 80
+PASS safety: Normal 120
+PASS text: Hindi crisis
+PASS text: Hinglish cardiac
+PASS text: No crisis for ordinary heat complaint
+PASS mood: PHQ-9 item 9 positive
+PASS mood: PHQ-9 total 12
+PASS mood: PHQ-2 total 2
+PASS sprint: Walk effect and consistency
+PASS sprint: Food effect computed from data
+PASS sprint: Insufficient A evenings
+PASS sprint: Effect below 15
+PASS privacy: CG-0001 → mood
+PASS privacy: CG-0001 → alerts
+PASS privacy: CG-0002 → medicines
+PASS privacy: LOCAL → readings
+PASS privacy: DR-0001 → mood
+PASS privacy: DR-0002 → readings
+PASS privacy: Sensitive upload hidden from uploader
+PASS privacy: Caregiver receives no forbidden records
+PASS privacy: Revocation takes immediate effect
+PASS privacy: Deleted patient inaccessible
+PASS cycle: Guarantee excludes −0.7 change
+PASS cycle: Guarantee for weak change with 8 checks
+PASS cycle: Sushma qualifies for Maintenance
+PASS cycle: No future follow-up lab at day 3
+PASS cycle: 13 weekly checks at day 90
+PASS cycle: Unverified lab excluded
+PASS rx: Unverified doctor blocked
+PASS rx: Audio chronic follow-up needs prior in-person
+PASS myth: Stop medicine claim
+PASS myth: Walk after dinner
+PASS myth: Cricket
+PASS myth: Unknown health claim
+PASS injector: Low notifies permitted caregivers
+PASS injector: Crisis excludes caregiver recipients
+PASS injector: Private crisis sends no alerts
+PASS injector: Offline low runs safety and queues SMS
+PASS injector: Offline contact sends on reconnect
+PASS injector: No recheck after 20 sim-minutes escalates
+PASS injector: Fresh normal recheck resolves low
+PASS injector: Time advance is idempotent
+PASS injector: Time travel preserves records but hides future
+PASS notify: Quiet hours blocks proactive nudge
+PASS notify: Safety bypasses quiet hours
+PASS metrics: Numerator cannot exceed denominator
+PASS metrics: Seeded cohort is deterministic
+PASS privacy: Weekly summary has no mood feeling
+PASS privacy: Caregiver alert projection excludes mood and clinic-only flags
+PASS offline: Remote caregiver cannot see an undelivered offline low
+PASS offline: Reconnection makes the low available to caregiver
+PASS privacy: Future family approval is hidden
+PASS rx: Negative medicine duration is blocked
+PASS sprint: Missed plan extends by at most two evenings
+PASS metrics: All clinics exist in each monthly cohort
+
+62/62 checks passed
