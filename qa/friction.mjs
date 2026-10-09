@@ -170,9 +170,10 @@ try {
     3,
     async (page, m) => {
       await m.click(
-        page
-          .getByRole("button", { name: "New prescription", exact: true })
-          .first(),
+        page.getByRole("button", { name: "Open", exact: true }).first(),
+      );
+      await m.click(
+        page.getByRole("button", { name: "Renew same", exact: true }),
       );
       await m.fill(page.getByLabel("6-digit signing PIN"), "246810", true);
       const identity = page.getByText("I have confirmed patient identity", {

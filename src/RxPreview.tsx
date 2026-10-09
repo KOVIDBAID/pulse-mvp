@@ -5,29 +5,33 @@ export function RxPreview({
   p,
   doctor,
   onClose,
+  inline = false,
 }: {
   rx: Row | any;
   p: Patient;
   doctor: any;
   onClose: () => void;
+  inline?: boolean;
 }) {
   return (
     <div
-      className="m-overlay rx-print-overlay"
-      role="dialog"
-      aria-modal="true"
+      className={inline ? "renew-preview" : "m-overlay rx-print-overlay"}
+      role={inline ? undefined : "dialog"}
+      aria-modal={inline ? undefined : true}
       aria-label="Prescription preview"
       onClick={onClose}
     >
       <div className="rx-paper" onClick={(e) => e.stopPropagation()}>
-        <div className="m-actions rx-print-controls">
-          <button className="m-btn" onClick={() => window.print()}>
-            Print / Save as PDF
-          </button>
-          <button className="m-btn secondary" onClick={onClose}>
-            Close preview
-          </button>
-        </div>
+        {!inline && (
+          <div className="m-actions rx-print-controls">
+            <button className="m-btn" onClick={() => window.print()}>
+              Print / Save as PDF
+            </button>
+            <button className="m-btn secondary" onClick={onClose}>
+              Close preview
+            </button>
+          </div>
+        )}
         <header>
           <h1>{rx.doctorName || doctor.name}</h1>
           <p>

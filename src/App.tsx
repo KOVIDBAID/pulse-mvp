@@ -336,8 +336,8 @@ function Shell({ children, title }: { children: ReactNode; title: string }) {
           <div>
             <b>{title}</b>
             <small>
-              {E.date(s.sim.day)} · {s.sim.time} · Day{" "}
-              {p ? s.sim.day - p.start : 0}
+              {E.date(s.sim.day)} · {s.sim.time}
+              {role !== "doctor" && ` · Day ${p ? s.sim.day - p.start : 0}`}
             </small>
           </div>
           {role === "patient" &&
@@ -3429,7 +3429,8 @@ function Caregiver({ alertsOnly = false }: { alertsOnly?: boolean } = {}) {
               {rank === 2 ? "⚠" : rank === 1 ? "!" : "✓"}{" "}
               {["Steady", "Needs attention", "Urgent"][rank]}
             </Badge>
-            <small>{member.name}</small><p>{why || "Only the categories they share are shown."}</p>
+            <small>{member.name}</small>
+            <p>{why || "Only the categories they share are shown."}</p>
             {medicines && (
               <p>
                 {missed
@@ -3880,25 +3881,38 @@ function Appointments() {
   );
 }
 function DoctorHome() {
-  const { s, go, mutate, askConfirm, askText } = useApp();
-  const id = s.session.userId;
-  const doctor = s.doctors[id];
-  const patients = s.patients.filter((p) => E.allow(s, id, p.id, "readings"));
-  const alerts = s.alerts.filter(
-    (a) =>
-      a.delivery !== "queued" &&
-      E.visible(a, s) &&
-      a.status !== "resolved" &&
-      E.allow(s, id, a.patientId, a.private ? "mood" : "readings"),
-  );
+  const { s, go, mutate } = useApp();
+  const id = s.session.userId,
+    doctor = s.doctors[id];
+  const open = (pid: string) => {
+    mutate((s) => {
+      s.session.patientId = pid;
+    });
+    go(`/doctor/patient/${pid}/overview`);
+  };
+  const appointments = s.appointments
+    .filter(
+      (a) =>
+        E.visible(a, s) &&
+        a.slotDay === s.sim.day &&
+        a.status === "confirmed" &&
+        E.allow(s, id, a.patientId, "readings"),
+    )
+    .sort((a, b) => a.slot.localeCompare(b.slot));
+  const reviews = [...s.alerts, ...s.supportTasks]
+    .filter(
+      (a) =>
+        a.delivery !== "queued" &&
+        E.visible(a, s) &&
+        a.status !== "resolved" &&
+        a.status !== "closed" &&
+        !a.reviewedBy &&
+        E.allow(s, id, a.patientId, a.private ? "mood" : "readings"),
+    )
+    .sort((a, b) => Number(b.priority === "P0") - Number(a.priority === "P0"))
+    .slice(0, 5);
   return (
-    <Shell title="Clinic overview">
-      <div className="m-hero">
-        <span>VERMA DIABETES & FAMILY CLINIC · KANPUR</span>
-        <h1>{doctor.name}</h1>
-        <p>MD (Medicine) · UPMC/DEMO/48213</p>
-        <Badge>{doctor.verified ? "Verified" : "Verification pending"}</Badge>
-      </div>
+    <Shell title="Today">
       {!doctor.verified ? (
         <Card title="Patient data and prescribing unlock after verification">
           <Btn
@@ -3913,49 +3927,66 @@ function DoctorHome() {
         </Card>
       ) : (
         <>
-          <div className="m-grid">
-            <Card title="Linked patients">
-              <strong className="big-number">{patients.length}</strong>
-              <Btn secondary onClick={() => go("/doctor/patients")}>
-                Open registry
-              </Btn>
-            </Card>
-            <Card title="Needs review">
-              <strong className="big-number">{alerts.length}</strong>
-              <p>Rule-based descriptive items</p>
-            </Card>
-          </div>
+          <Card title="Today's appointments">
+            {appointments.map((a) => {
+              const proof = E.allow(s, id, a.patientId, "labs")
+                ? E.proof(s, a.patientId)
+                : null;
+              return (
+                <div className="m-row" key={a.id}>
+                  <div>
+                    <b>
+                      {a.slot} · {E.patient(s, a.patientId).name}
+                    </b>
+                    <small>
+                      {proof?.ready
+                        ? `HbA1c ${proof.baseline?.value} → ${proof.latest?.value} · Lab`
+                        : "Clinic review"}
+                    </small>
+                  </div>
+                  <Btn secondary onClick={() => open(a.patientId)}>
+                    Open
+                  </Btn>
+                </div>
+              );
+            })}
+            {!appointments.length && <Empty>No appointments today.</Empty>}
+          </Card>
           <Card title="Needs your review">
-            {alerts.map((a) => (
+            {reviews.map((a) => (
               <div className="m-row" key={a.id}>
                 <div>
                   <b>{E.patient(s, a.patientId).name}</b>
                   <small>
-                    {a.rule} · {E.date(a.day)} · for your review
+                    {E.ruleLabel(a.rule || "W3")}
+                    {a.value ? ` · ${a.value} mg/dL` : ""} · for your review
                   </small>
                 </div>
+                <Btn secondary onClick={() => open(a.patientId)}>
+                  Open
+                </Btn>
                 <Btn
                   secondary
-                  onClick={() => {
+                  onClick={() =>
                     mutate((s) => {
-                      s.session.patientId = a.patientId;
-                    });
-                    go(`/doctor/patient/${a.patientId}/overview`);
-                  }}
+                      const item = [...s.alerts, ...s.supportTasks].find(
+                        (r) => r.id === a.id,
+                      )!;
+                      item.reviewedBy = id;
+                      item.reviewedAt = E.stamp(s);
+                      (item.timeline ||= []).push({
+                        ...E.stamp(s),
+                        text: `Reviewed by ${doctor.name}`,
+                      });
+                    })
+                  }
                 >
-                  Open patient
+                  Reviewed
                 </Btn>
               </div>
             ))}
-            {!alerts.length && <Empty>No current review items.</Empty>}
+            {!reviews.length && <Empty>No current review items.</Empty>}
           </Card>
-          <Btn
-            onClick={() =>
-              go(`/doctor/patient/${s.session.patientId}/prescriptions/new`)
-            }
-          >
-            New prescription
-          </Btn>
         </>
       )}
     </Shell>
@@ -4250,7 +4281,7 @@ function DoctorPatient() {
     </Card>
   ) : null;
   return (
-    <Shell title="Patient profile">
+    <Shell title="Brief">
       {!allowed ? (
         <Empty>
           Access withdrawn by the patient, or doctor verification pending.
@@ -4265,6 +4296,18 @@ function DoctorPatient() {
             </p>
             <Badge>Consent-controlled access</Badge>
             <div className="m-actions">
+              {E.activeRx(s, pid) && (
+                <Btn
+                  onClick={() => {
+                    mutate((s) => {
+                      s.session.patientId = pid;
+                    });
+                    go(`/doctor/patient/${pid}/prescriptions/new?renew=1`);
+                  }}
+                >
+                  Renew same
+                </Btn>
+              )}
               <Btn
                 onClick={() => go(`/doctor/patient/${pid}/prescriptions/new`)}
               >
@@ -4335,6 +4378,15 @@ function DoctorPatient() {
                       Fasting mean · first vs latest two weeks · n=
                       {fasting.length}
                     </p>
+                    <div className="source-legend">
+                      {[
+                        ...new Set(
+                          fasting.map((r) => r.source as E.DataSource),
+                        ),
+                      ].map((source) => (
+                        <SourceBadge key={source} source={source} />
+                      ))}
+                    </div>
                   </div>
                 </div>
                 <p>
@@ -4377,8 +4429,8 @@ function DoctorPatient() {
                   .map((a) => (
                     <div className="m-row" key={a.id}>
                       <p>
-                        {a.rule} · {E.date(a.day)} · {a.status} · for your
-                        review
+                        {E.ruleLabel(a.rule)} · {E.date(a.day)} · {a.status} ·
+                        for your review
                       </p>
                       <Btn
                         secondary
@@ -4393,6 +4445,36 @@ function DoctorPatient() {
                         {a.reviewedBy ? "Reviewed" : "Mark reviewed"}
                       </Btn>
                     </div>
+                  ))}
+              </Card>
+              <Card title="Medicines and adherence">
+                {E.view(s, user, pid, "medicines", s.prescriptions)
+                  .filter((r) => r.id === E.activeRx(s, pid)?.id)
+                  .map((r) => (
+                    <p key={r.id}>
+                      {r.medicines
+                        .map(
+                          (m: any) =>
+                            `${m.generic} ${m.strength} · ${m.instruction}`,
+                        )
+                        .join("; ")}
+                    </p>
+                  ))}
+                <p>
+                  {
+                    E.view(s, user, pid, "medicines", s.doses).filter(
+                      (r) => r.day >= s.sim.day - 6 && r.status === "taken",
+                    ).length
+                  }{" "}
+                  doses marked this week
+                </p>
+              </Card>
+              <Card title="Patient questions">
+                {E.view(s, user, pid, "message", s.messages)
+                  .filter((r) => r.from === pid)
+                  .slice(-3)
+                  .map((r) => (
+                    <p key={r.id}>{r.text}</p>
                   ))}
               </Card>
             </>
@@ -4517,6 +4599,9 @@ function DoctorPatient() {
             </Card>
           ) : tab === "records" ? (
             <>
+              <Btn secondary onClick={() => go(`/doctor/patient/${pid}/map`)}>
+                Health map
+              </Btn>
               {reportsView}
               <TestsOrders pid={pid} />
             </>
@@ -4591,26 +4676,38 @@ function InlineMessages({ pid }: { pid: string }) {
   );
 }
 function Rx() {
-  const { s, mutate, go, toast, askConfirm, askText } = useApp();
+  const { s, mutate, go, route, toast, askConfirm, askText } = useApp();
   const pid = s.session.patientId,
     p = E.patient(s),
     doctor = s.doctors[s.session.userId];
   const current = E.activeRx(s, pid);
+  const renew =
+    new URLSearchParams(route.split("?")[1]).get("renew") === "1" && !!current;
   const [draft, setDraft] = useState<any>(() =>
-    s.rxDraft?.patientId === pid
-      ? s.rxDraft
-      : {
+    renew
+      ? {
           patientId: pid,
-          mode: "in-clinic",
-          diagnosis: "Type 2 diabetes — synthetic demo",
-          followup: "2026-11-09",
-          medicines: (current?.medicines || E.medicines).map((m: any) => ({
-            ...m,
-            duration: m.duration || 90,
-          })),
-          advice: "",
+          mode: current!.mode || "in-clinic",
+          diagnosis: current!.diagnosis || "Type 2 diabetes — synthetic demo",
+          followup: current!.followup || "2026-11-09",
+          medicines: structuredClone(current!.medicines),
+          advice: current!.advice || "",
           testingPlan: structuredClone(p.testingPlan),
-        },
+        }
+      : s.rxDraft?.patientId === pid
+        ? s.rxDraft
+        : {
+            patientId: pid,
+            mode: "in-clinic",
+            diagnosis: "Type 2 diabetes — synthetic demo",
+            followup: "2026-11-09",
+            medicines: (current?.medicines || E.medicines).map((m: any) => ({
+              ...m,
+              duration: m.duration || 90,
+            })),
+            advice: "",
+            testingPlan: structuredClone(p.testingPlan),
+          },
   );
   const [pin, setPin] = useState("");
   const [attempts, setAttempts] = useState(0);
@@ -4667,278 +4764,303 @@ function Rx() {
           </>
         ) : (
           <>
-            <Select
-              label="Consultation mode"
-              value={draft.mode}
-              onChange={(v: string) => setDraft({ ...draft, mode: v })}
-              options={["in-clinic", "video", "audio", "text"]}
-            />
-            <Field
-              label="Provisional diagnosis"
-              value={draft.diagnosis}
-              onChange={(v: string) => setDraft({ ...draft, diagnosis: v })}
-            />
-            <Card title="Testing plan">
-              <Select
-                label="Testing preset"
-                value=""
-                options={[
-                  ["", "Choose preset"],
-                  ["three", "3 fasting a week"],
-                  ["daily", "Daily fasting"],
-                  ["plus", "Fasting + 1 after-dinner a week"],
-                  ["custom", "Custom"],
-                ]}
-                onChange={(v: string) =>
-                  setDraft({
-                    ...draft,
-                    testingPlan: {
-                      ...(draft.testingPlan || p.testingPlan),
-                      schedule:
-                        v === "custom"
-                          ? (draft.testingPlan || p.testingPlan).schedule
-                          : [
-                              {
-                                slot: "fasting",
-                                days:
-                                  v === "daily"
-                                    ? [0, 1, 2, 3, 4, 5, 6]
-                                    : [1, 3, 5],
-                              },
-                              ...(v === "plus"
-                                ? [{ slot: "2h-after-dinner", days: [0] }]
-                                : []),
-                            ],
-                    },
-                  })
-                }
+            {renew ? (
+              <RxPreview
+                inline
+                rx={{ ...draft, ...E.stamp(s), signed: false }}
+                p={p}
+                doctor={doctor}
+                onClose={() => {}}
               />
-              {(draft.testingPlan || p.testingPlan).schedule.map(
-                (item: any, i: number) => (
-                  <div key={i}>
+            ) : (
+              <>
+                <Select
+                  label="Consultation mode"
+                  value={draft.mode}
+                  onChange={(v: string) => setDraft({ ...draft, mode: v })}
+                  options={["in-clinic", "video", "audio", "text"]}
+                />
+                <Field
+                  label="Provisional diagnosis"
+                  value={draft.diagnosis}
+                  onChange={(v: string) => setDraft({ ...draft, diagnosis: v })}
+                />
+                <Card title="Testing plan">
+                  <Select
+                    label="Testing preset"
+                    value=""
+                    options={[
+                      ["", "Choose preset"],
+                      ["three", "3 fasting a week"],
+                      ["daily", "Daily fasting"],
+                      ["plus", "Fasting + 1 after-dinner a week"],
+                      ["custom", "Custom"],
+                    ]}
+                    onChange={(v: string) =>
+                      setDraft({
+                        ...draft,
+                        testingPlan: {
+                          ...(draft.testingPlan || p.testingPlan),
+                          schedule:
+                            v === "custom"
+                              ? (draft.testingPlan || p.testingPlan).schedule
+                              : [
+                                  {
+                                    slot: "fasting",
+                                    days:
+                                      v === "daily"
+                                        ? [0, 1, 2, 3, 4, 5, 6]
+                                        : [1, 3, 5],
+                                  },
+                                  ...(v === "plus"
+                                    ? [{ slot: "2h-after-dinner", days: [0] }]
+                                    : []),
+                                ],
+                        },
+                      })
+                    }
+                  />
+                  {(draft.testingPlan || p.testingPlan).schedule.map(
+                    (item: any, i: number) => (
+                      <div key={i}>
+                        <Select
+                          label={`Test slot ${i + 1}`}
+                          value={item.slot}
+                          options={Object.entries(E.TEST_LABEL)}
+                          onChange={(slot: string) =>
+                            setDraft({
+                              ...draft,
+                              testingPlan: {
+                                ...(draft.testingPlan || p.testingPlan),
+                                schedule: (
+                                  draft.testingPlan || p.testingPlan
+                                ).schedule.map((x: any, j: number) =>
+                                  j === i ? { ...x, slot } : x,
+                                ),
+                              },
+                            })
+                          }
+                        />
+                        <div className="m-actions">
+                          {[
+                            "Sun",
+                            "Mon",
+                            "Tue",
+                            "Wed",
+                            "Thu",
+                            "Fri",
+                            "Sat",
+                          ].map((label, d) => (
+                            <Toggle
+                              key={d}
+                              label={`${label} · slot ${i + 1}`}
+                              on={item.days.includes(d)}
+                              onChange={() =>
+                                setDraft({
+                                  ...draft,
+                                  testingPlan: {
+                                    ...(draft.testingPlan || p.testingPlan),
+                                    schedule: (
+                                      draft.testingPlan || p.testingPlan
+                                    ).schedule.map((x: any, j: number) =>
+                                      j === i
+                                        ? {
+                                            ...x,
+                                            days: x.days.includes(d)
+                                              ? x.days.filter(
+                                                  (v: number) => v !== d,
+                                                )
+                                              : [...x.days, d],
+                                          }
+                                        : x,
+                                    ),
+                                  },
+                                })
+                              }
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ),
+                  )}
+                  <Btn
+                    secondary
+                    onClick={() =>
+                      setDraft({
+                        ...draft,
+                        testingPlan: {
+                          ...(draft.testingPlan || p.testingPlan),
+                          schedule: [
+                            ...(draft.testingPlan || p.testingPlan).schedule,
+                            { slot: "bedtime", days: [0] },
+                          ],
+                        },
+                      })
+                    }
+                  >
+                    Add test slot
+                  </Btn>
+                  <Toggle
+                    label="Prescribe Sugar Detective (6 evenings, about 12 extra strips)"
+                    on={!!(draft.testingPlan || p.testingPlan).experiment}
+                    onChange={() =>
+                      setDraft({
+                        ...draft,
+                        testingPlan: {
+                          ...(draft.testingPlan || p.testingPlan),
+                          experiment: (draft.testingPlan || p.testingPlan)
+                            .experiment
+                            ? undefined
+                            : {
+                                habitId: "walk_after_dinner",
+                                evenings: 6,
+                                approvedBy: s.session.userId,
+                                approvedOn: s.sim.day,
+                              },
+                        },
+                      })
+                    }
+                  />
+                  {(draft.testingPlan || p.testingPlan).experiment && (
                     <Select
-                      label={`Test slot ${i + 1}`}
-                      value={item.slot}
-                      options={Object.entries(E.TEST_LABEL)}
-                      onChange={(slot: string) =>
+                      label="Prescribed habit"
+                      value={
+                        (draft.testingPlan || p.testingPlan).experiment.habitId
+                      }
+                      options={habits}
+                      onChange={(habitId: string) =>
                         setDraft({
                           ...draft,
                           testingPlan: {
                             ...(draft.testingPlan || p.testingPlan),
-                            schedule: (
-                              draft.testingPlan || p.testingPlan
-                            ).schedule.map((x: any, j: number) =>
-                              j === i ? { ...x, slot } : x,
-                            ),
+                            experiment: {
+                              ...(draft.testingPlan || p.testingPlan)
+                                .experiment,
+                              habitId,
+                            },
                           },
                         })
                       }
                     />
-                    <div className="m-actions">
-                      {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
-                        (label, d) => (
-                          <Toggle
-                            key={d}
-                            label={`${label} · slot ${i + 1}`}
-                            on={item.days.includes(d)}
-                            onChange={() =>
-                              setDraft({
-                                ...draft,
-                                testingPlan: {
-                                  ...(draft.testingPlan || p.testingPlan),
-                                  schedule: (
-                                    draft.testingPlan || p.testingPlan
-                                  ).schedule.map((x: any, j: number) =>
-                                    j === i
-                                      ? {
-                                          ...x,
-                                          days: x.days.includes(d)
-                                            ? x.days.filter(
-                                                (v: number) => v !== d,
-                                              )
-                                            : [...x.days, d],
-                                        }
-                                      : x,
-                                  ),
-                                },
-                              })
-                            }
-                          />
-                        ),
-                      )}
+                  )}
+                  <p>
+                    Signed with this prescription. Off-plan readings are always
+                    accepted.
+                  </p>
+                </Card>
+                {draft.medicines.map((m: any, i: number) => (
+                  <div className="rx-edit" key={i}>
+                    <h3>Medicine {i + 1}</h3>
+                    <div className="m-grid">
+                      <Select
+                        label="Generic name"
+                        value={m.generic}
+                        onChange={(v: string) => updateMed(i, "generic", v)}
+                        options={E.genericNames}
+                      />
+                      <Field
+                        label="Strength"
+                        value={m.strength}
+                        onChange={(v: string) => updateMed(i, "strength", v)}
+                      />
+                      <Select
+                        label="Dose pattern"
+                        value={m.pattern}
+                        onChange={(v: string) => updateMed(i, "pattern", v)}
+                        options={["1-0-0", "0-1-0", "0-0-1", "1-0-1", "1-1-1"]}
+                      />
+                      <Field
+                        label="Duration days"
+                        type="number"
+                        min={1}
+                        max={180}
+                        value={m.duration}
+                        onChange={(v: string) =>
+                          updateMed(i, "duration", Number(v))
+                        }
+                      />
+                      <Select
+                        label="Patient instruction"
+                        value={m.instruction}
+                        onChange={(v: string) => updateMed(i, "instruction", v)}
+                        options={[
+                          "After food",
+                          "Before food",
+                          "Morning, empty stomach",
+                          "At bedtime",
+                        ]}
+                      />
                     </div>
+                    <Btn
+                      secondary
+                      onClick={() =>
+                        setDraft({
+                          ...draft,
+                          medicines: draft.medicines.filter(
+                            (_: any, j: number) => i !== j,
+                          ),
+                        })
+                      }
+                    >
+                      Remove row
+                    </Btn>
                   </div>
-                ),
-              )}
-              <Btn
-                secondary
-                onClick={() =>
-                  setDraft({
-                    ...draft,
-                    testingPlan: {
-                      ...(draft.testingPlan || p.testingPlan),
-                      schedule: [
-                        ...(draft.testingPlan || p.testingPlan).schedule,
-                        { slot: "bedtime", days: [0] },
-                      ],
-                    },
-                  })
-                }
-              >
-                Add test slot
-              </Btn>
-              <Toggle
-                label="Prescribe Sugar Detective (6 evenings, about 12 extra strips)"
-                on={!!(draft.testingPlan || p.testingPlan).experiment}
-                onChange={() =>
-                  setDraft({
-                    ...draft,
-                    testingPlan: {
-                      ...(draft.testingPlan || p.testingPlan),
-                      experiment: (draft.testingPlan || p.testingPlan)
-                        .experiment
-                        ? undefined
-                        : {
-                            habitId: "walk_after_dinner",
-                            evenings: 6,
-                            approvedBy: s.session.userId,
-                            approvedOn: s.sim.day,
-                          },
-                    },
-                  })
-                }
-              />
-              {(draft.testingPlan || p.testingPlan).experiment && (
-                <Select
-                  label="Prescribed habit"
-                  value={
-                    (draft.testingPlan || p.testingPlan).experiment.habitId
-                  }
-                  options={habits}
-                  onChange={(habitId: string) =>
-                    setDraft({
-                      ...draft,
-                      testingPlan: {
-                        ...(draft.testingPlan || p.testingPlan),
-                        experiment: {
-                          ...(draft.testingPlan || p.testingPlan).experiment,
-                          habitId,
-                        },
-                      },
-                    })
-                  }
-                />
-              )}
-              <p>
-                Signed with this prescription. Off-plan readings are always
-                accepted.
-              </p>
-            </Card>
-            {draft.medicines.map((m: any, i: number) => (
-              <div className="rx-edit" key={i}>
-                <h3>Medicine {i + 1}</h3>
-                <div className="m-grid">
-                  <Select
-                    label="Generic name"
-                    value={m.generic}
-                    onChange={(v: string) => updateMed(i, "generic", v)}
-                    options={E.genericNames}
-                  />
-                  <Field
-                    label="Strength"
-                    value={m.strength}
-                    onChange={(v: string) => updateMed(i, "strength", v)}
-                  />
-                  <Select
-                    label="Dose pattern"
-                    value={m.pattern}
-                    onChange={(v: string) => updateMed(i, "pattern", v)}
-                    options={["1-0-0", "0-1-0", "0-0-1", "1-0-1", "1-1-1"]}
-                  />
-                  <Field
-                    label="Duration days"
-                    type="number"
-                    min={1}
-                    max={180}
-                    value={m.duration}
-                    onChange={(v: string) =>
-                      updateMed(i, "duration", Number(v))
-                    }
-                  />
-                  <Select
-                    label="Patient instruction"
-                    value={m.instruction}
-                    onChange={(v: string) => updateMed(i, "instruction", v)}
-                    options={[
-                      "After food",
-                      "Before food",
-                      "Morning, empty stomach",
-                      "At bedtime",
-                    ]}
-                  />
-                </div>
+                ))}
                 <Btn
                   secondary
                   onClick={() =>
                     setDraft({
                       ...draft,
-                      medicines: draft.medicines.filter(
-                        (_: any, j: number) => i !== j,
-                      ),
+                      medicines: [
+                        ...draft.medicines,
+                        {
+                          generic: "Metformin",
+                          strength: "500 mg",
+                          pattern: "1-0-1",
+                          duration: 90,
+                          instruction: "After food",
+                        },
+                      ],
                     })
                   }
                 >
-                  Remove row
+                  Add medicine
                 </Btn>
-              </div>
-            ))}
-            <Btn
-              secondary
-              onClick={() =>
-                setDraft({
-                  ...draft,
-                  medicines: [
-                    ...draft.medicines,
-                    {
-                      generic: "Metformin",
-                      strength: "500 mg",
-                      pattern: "1-0-1",
-                      duration: 90,
-                      instruction: "After food",
-                    },
-                  ],
-                })
-              }
-            >
-              Add medicine
-            </Btn>
-            <Field
-              label="Follow-up date"
-              type="date"
-              value={draft.followup}
-              onChange={(v: string) => setDraft({ ...draft, followup: v })}
-            />
-            <Field
-              label="Doctor advice"
-              value={draft.advice}
-              onChange={(v: string) => setDraft({ ...draft, advice: v })}
-            />
-            <p className="m-hint">
-              Info: Metformin also appears in an older Dr. Khan prescription.
-              Verify the current list.
-            </p>
-            {errors.map((e) => (
-              <p role="alert" className="m-error" key={e}>
-                {e}
-              </p>
-            ))}
-            <Btn
-              secondary
-              disabled={!!errors.length}
-              onClick={() => setPreview(true)}
-            >
-              Preview / print prescription
-            </Btn>
+                <Field
+                  label="Follow-up date"
+                  type="date"
+                  value={draft.followup}
+                  onChange={(v: string) => setDraft({ ...draft, followup: v })}
+                />
+                <Field
+                  label="Doctor advice"
+                  value={draft.advice}
+                  onChange={(v: string) => setDraft({ ...draft, advice: v })}
+                />
+                <p className="m-hint">
+                  Info: Metformin also appears in an older Dr. Khan
+                  prescription. Verify the current list.
+                </p>
+                {errors.map((e) => (
+                  <p role="alert" className="m-error" key={e}>
+                    {e}
+                  </p>
+                ))}
+                <Btn
+                  secondary
+                  disabled={!!errors.length}
+                  onClick={() => setPreview(true)}
+                >
+                  Preview / print prescription
+                </Btn>
+              </>
+            )}
+            {renew &&
+              errors.map((e) => (
+                <p role="alert" key={e}>
+                  {e}
+                </p>
+              ))}
             <Field
               label="6-digit signing PIN"
               type="password"
@@ -4993,8 +5115,8 @@ function Rx() {
                   s.prescriptions.push({
                     id: E.uid("RX"),
                     patientId: pid,
-                    ...E.stamp(s),
                     ...draft,
+                    ...E.stamp(s),
                     medicines: draft.medicines.map((m: any) => ({
                       ...m,
                       times: E.patternTimes(m.pattern),
@@ -5441,6 +5563,7 @@ function Impact() {
   const doctor = s.session.role === "doctor";
   return (
     <Shell title={doctor ? "Practice outcomes" : "Impact console"}>
+      {doctor && <div className="m-grid"><Card title="Linked patients"><strong className="big-number">{s.patients.filter(p => E.allow(s,s.session.userId,p.id,"readings")).length}</strong></Card><Card title="Needs review"><strong className="big-number">{s.alerts.filter(a => E.visible(a,s) && a.delivery !== "queued" && a.status !== "resolved" && !a.reviewedBy && E.allow(s,s.session.userId,a.patientId,a.private ? "mood" : "readings")).length}</strong></Card></div>}
       <Card title="Week-3 passive habit metric · Demo">
         {s.patients.slice(0, 2).map((p) => (
           <p key={p.id}>

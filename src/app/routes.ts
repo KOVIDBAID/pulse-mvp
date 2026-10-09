@@ -125,12 +125,11 @@ export const ROUTES: Record<
   },
 };
 export const PROFILE_TABS = [
-  d("overview", "Overview"),
-  d("map", "Health map"),
+  d("overview", "Brief"),
   d("charts", "Charts"),
   d("records", "Records"),
   d("prescriptions", "Prescriptions"),
-  d("messages", "Messages & notes"),
+  d("messages", "Messages"),
 ];
 export function resolveRoute(input: string): string {
   const [pathname, query = ""] = input.split("?");
