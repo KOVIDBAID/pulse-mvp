@@ -70,7 +70,7 @@ try {
   );
   assert.equal(saved.version, 4);
   assert.equal(saved.messages[0]._legacyText.text, text);
-  await page.goto(`${base}/#/patient/my-data`);
+  await page.goto(`${base}/#/patient/family`);
   await page
     .getByRole("button", { name: "Download my data", exact: true })
     .waitFor();

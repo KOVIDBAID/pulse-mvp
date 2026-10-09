@@ -43,3 +43,15 @@ Rule coverage includes low/high/LO readings, stale versus fresh readings, repeat
 - Seeded coherent dose history so time travel does not mark every historical medicine as missed.
 
 This is targeted hackathon QA, not a production clinical, privacy or accessibility certification. Extended acceptance gaps are listed in `REQUIREMENTS_AUDIT.md`.
+
+## Minimal information architecture verification — 9 October 2026
+
+- `pnpm typecheck`, `pnpm test` (75/75), and `pnpm build`: passed; output in `qa/ia-gates.txt`.
+- `pnpm qa:static`: `No Devanagari outside the allowlist` (`qa/ia-static.txt`).
+- `pnpm qa`: all 35 visible destinations and favicon passed; no not-found or Devanagari failures (`qa/ia-sweep.txt`).
+- Playwright IA check: 26 compatibility redirects, merged feature containers, caregiver report entry, doctor consent and responsive navigation, eight scenario identity/destination pairs, and all fourteen guided steps. Console/runtime errors are checked across those pages (`qa/ia-checks.txt`).
+- Existing click and legacy migration/export checks are included in the same IA run. The QA runner's two ownership/cleanup regression tests passed (`qa/ia-runner.txt`).
+- QA used an owned production preview on port 5175 because the existing development server occupies 5173. The runner verified the built HTML and stopped its preview afterward.
+- Launch was visually checked in the in-app browser; emergency links, role cards and demo entry points are visible. The preview image is `../pulse-minimal-preview.png`.
+
+The guide automates navigation and simulation day selection. Message entry, safety rechecks, signing and mock UPI approval remain presenter actions; this run verifies all fourteen guide destinations rather than claiming those actions happened automatically.

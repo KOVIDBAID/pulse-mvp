@@ -49,7 +49,7 @@ The guided mode supplies 14 navigation steps with Next/Back. Actions such as typ
 ## Demo controls and accounts
 
 - OTP: `123456`; caregiver/doctor login password: `demo1234`; signing PIN: `246810`.
-- Ramesh, Amit, Neha, Dr. Verma, pending Dr. Saxena, Pooja and Founder are synthetic identities.
+- Ramesh, Amit, Neha, Dr. Verma, pending Dr. Saxena and Pooja are synthetic identities.
 - Day 0 is **11 July 2026**; Day 90 is **9 October 2026**, using the supplied simulation calendar.
 - Shared records use `localStorage["pulse-demo-v1"]`; each tab's login uses `sessionStorage["pulse-session-v1"]`. Changes propagate between tabs on the same origin. Different devices are not synchronized.
 - Moving the simulated clock backward hides future rows without deleting them. Optional consent and family permissions can be changed from the patient's menu.
@@ -84,3 +84,15 @@ The runner starts Vite preview on 127.0.0.1:5173 and stops it afterward. That po
 Unknown saved text containing Devanagari is shown as an English review notice; the original stays on the same record under `_legacyText` and is included in the patient's JSON export. Unknown medicine instructions explicitly require clinician review. Safety rules evaluate the original symptoms. Version-4 saves are normalized too, covering saves from the earlier partial conversion. This is a display safeguard, not automatic translation of clinical or personal text.
 
 QA now waits for its own preview process, verifies its response against `dist/index.html`, and awaits shutdown. A busy port fails immediately. Keep the default port 5173 free, or explicitly run `PULSE_QA_PORT=5175 pnpm qa:all`. Runner regression checks: `node --test qa/runner.test.mjs`. Legacy UI/export check: `node qa/run-all.mjs migration` (with the same port/browser environment variables if needed).
+
+## Minimal navigation checkpoint
+
+`src/app/routes.ts` owns role navigation, grouped drawers, hidden destinations, redirects, demo scenarios and the 14-step guide. Run `node qa/sync-routes.mjs` after changing visible destinations; the sweep rejects a stale `qa/routes.json`.
+
+Patient: Today, Progress, Records, Doctor, with a floating + Log. Family & privacy combines sharing, consent and data rights. Doctor contains Messages, Appointments and Tests. Settings includes the band connection. Progress includes the Day-90 proof section and connected band data.
+
+Caregiver: Home, Alerts, Notes, Payments. Switch family member opens a sheet; Add a report lives in Notes and retains sensitive-document restrictions. Doctor: Today, Patients, Messages, Appointments; the same navigation becomes a sidebar at 900px. Patient profiles have six tabs, with separately consented mood inside Overview. Team: Care desk, Myth review, Impact; the desk contains Queue, Case review and Messages sent.
+
+Legacy hash links redirect to their canonical destination, preserving query parameters. These are screen merges; existing actions and safety/consent checks remain available. Launch offers three role cards, four quick demo identities and fixed emergency phone links. Demo controls expose six identities and eight scenarios; each scenario switches identity and opens its effect.
+
+Run the additional Playwright checks with `node qa/run-all.mjs ia`. They cover legacy redirects, merged screens, consented mood visibility, mobile/desktop doctor navigation, all eight scenarios and all fourteen guided steps with console-error checks. Use the same Chromium and port variables described above. Results are in `qa/ia-checks.txt` and `qa/ia-sweep.txt`.

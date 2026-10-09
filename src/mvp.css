@@ -974,3 +974,176 @@ h3 {
 .role-team :where(h1, h2, h3, button, input, textarea, select) {
   font-family: "IBM Plex Sans", Arial, sans-serif;
 }
+/* Essential destinations, with one shell around merged workflows. */
+.embedded-view {
+  margin: 20px 0;
+}
+.embedded-view > h2 {
+  font-size: 20px;
+  margin: 0 0 12px;
+}
+.log-fab {
+  position: fixed;
+  bottom: 84px;
+  right: max(18px, calc((100vw - 480px) / 2 + 18px));
+  background: #1f6f5c;
+  color: white;
+  border: 0;
+  border-radius: 28px;
+  min-height: 48px;
+  padding: 12px 24px;
+  z-index: 15;
+  box-shadow: 0 4px 16px #0002;
+  font-weight: 700;
+}
+.role-patient .m-content {
+  padding-bottom: 150px;
+}
+.role-doctor {
+  min-width: 0;
+}
+.doctor-bottom {
+  display: none;
+}
+.m-drawer h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+  color: var(--ink-600);
+  margin: 22px 0 8px;
+}
+.m-sidebar .drawer-link {
+  min-height: 48px;
+}
+.launch-minimal {
+  max-width: 980px;
+  margin: auto;
+  padding: 40px 24px 160px;
+  font-family: "Noto Sans", sans-serif;
+}
+.launch-minimal header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+.launch-minimal h1 {
+  color: #1f6f5c;
+  font-size: 44px;
+  margin: 0;
+}
+.launch-role-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.launch-role-grid section,
+.launch-demo {
+  border: 1px solid var(--line);
+  background: white;
+  border-radius: 20px;
+  padding: 22px;
+}
+.launch-role-grid h2 {
+  font-size: 22px;
+}
+.launch-role-grid p {
+  min-height: 65px;
+  color: var(--ink-600);
+}
+.launch-minimal button,
+.launch-emergency a {
+  min-height: 48px;
+  border: 1px solid #1f6f5c;
+  border-radius: 12px;
+  padding: 12px 16px;
+  background: white;
+  color: #1f6f5c;
+  font: inherit;
+  cursor: pointer;
+}
+.launch-role-grid button:first-child {
+  background: #1f6f5c;
+  color: white;
+}
+.launch-demo {
+  margin: 24px 0;
+}
+.launch-demo h2 {
+  font-size: 18px;
+}
+.launch-minimal footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+.launch-text-link,
+.launch-minimal footer button {
+  border: 0 !important;
+  text-decoration: underline;
+  background: transparent !important;
+}
+.launch-emergency {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: #fff4e0;
+  border-top: 1px solid #e0a526;
+  padding: 14px;
+  z-index: 30;
+}
+.launch-emergency a {
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  color: #8a5709;
+  border-color: #8a5709;
+  background: white;
+}
+@media (max-width: 899px) {
+  .role-doctor.m-app.desktop {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+  }
+  .role-doctor .m-sidebar {
+    display: none;
+  }
+  .doctor-bottom {
+    display: flex;
+    max-width: 100%;
+    width: 100%;
+  }
+  .role-doctor .m-content {
+    padding-bottom: 110px;
+  }
+}
+@media (min-width: 900px) {
+  .role-doctor .m-sidebar {
+    display: block;
+  }
+}
+@media (max-width: 650px) {
+  .launch-role-grid {
+    grid-template-columns: 1fr;
+  }
+  .launch-role-grid p {
+    min-height: 0;
+  }
+  .launch-minimal {
+    padding: 28px 18px 190px;
+  }
+  .launch-emergency {
+    gap: 8px;
+  }
+}
+/* Keep demo controls clear of the patient's floating Log action. */
+.demo-pill {
+  bottom: 148px !important;
+}
+.m-card.private-card {
+  border-left: 4px solid var(--plum-700);
+}

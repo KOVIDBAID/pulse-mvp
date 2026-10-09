@@ -9,7 +9,7 @@ if (!Number.isInteger(port) || port < 1 || port > 65535)
   throw new Error("Invalid PULSE_QA_PORT");
 const base = `http://127.0.0.1:${port}`;
 const names = process.argv.slice(2);
-if (names.some((name) => !["sweep", "clicks", "migration"].includes(name)))
+if (names.some((name) => !["sweep", "clicks", "migration", "ia"].includes(name)))
   throw new Error("Unknown QA script");
 let output = "";
 let activeScript;

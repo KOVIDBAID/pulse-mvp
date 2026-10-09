@@ -1,6 +1,9 @@
 import { chromium } from 'playwright';
 import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {config} from './config.mjs';
 const routes=JSON.parse(fs.readFileSync(new URL('./routes.json',import.meta.url),'utf8'));
+for(const group of routes) assert.deepEqual(group.routes,config.visibleRoutes(group.session.role),'qa/routes.json must match src/app/routes.ts');
 const browser=await chromium.launch({headless:true});
 let failures=0;
 try {

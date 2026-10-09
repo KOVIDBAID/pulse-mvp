@@ -1,0 +1,7 @@
+Verified owned production preview: http://127.0.0.1:5175
+PASS 26 legacy redirects, merged screens, doctor mood consent and responsive navigation
+PASS all 8 scenarios switch identity and open their destination
+PASS guided demo: 14/14 canonical steps; zero console or runtime errors
+PASS clicks: patient navigation and in-app rules
+PASS legacy UI: English notice, version-3 tab login, original text in patient export, no runtime errors
+Owned preview stopped

@@ -1,0 +1,10 @@
+✔ A 200 response from an occupied port never counts as preview readiness (588.262721ms)
+✔ A free port serves the built HTML and is released before QA returns (599.588349ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1327.507603

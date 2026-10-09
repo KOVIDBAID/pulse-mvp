@@ -27,6 +27,14 @@ import {
   X,
 } from "lucide-react";
 import { Launch } from "./Launch";
+import {
+  ROUTES,
+  PROFILE_TABS,
+  GUIDE,
+  SCENARIOS,
+  resolveRoute,
+  allowedPages,
+} from "./app/routes";
 import * as E from "./lib/engine";
 import { selfTests } from "./lib/selfTests";
 import "./extended.css";
@@ -36,6 +44,7 @@ import { RxPreview } from "./RxPreview";
 const KEY = "pulse-demo-v1";
 const SESSION_KEY = "pulse-session-v1";
 const C = createContext<any>(null);
+const Embedded = createContext(false);
 const useApp = () =>
   useContext(C) as {
     s: E.State;
@@ -185,42 +194,15 @@ const roleNames: any = {
   "DR-0001": "Dr. Verma",
   "DR-0002": "Dr. Saxena (pending)",
   TEAM: "Pooja",
-  FOUNDER: "Founder",
   [E.P]: "Ramesh",
 };
-const navs: Record<E.Role, [string, string][]> = {
-  patient: [
-    ["home", "Today"],
-    ["log", "Log"],
-    ["progress", "Progress"],
-    ["records", "Records"],
-  ],
-  caregiver: [
-    ["home", "Home"],
-    ["care", "Care plan"],
-    ["billing", "Payments"],
-    ["notifications", "Updates"],
-  ],
-  doctor: [
-    ["home", "Overview"],
-    ["patients", "Patients"],
-    ["appointments", "Appointments"],
-    ["messages", "Messages"],
-    ["outcomes", "Practice outcomes"],
-  ],
-  team: [
-    ["desk", "Care desk"],
-    ["case-review", "Case review"],
-    ["myths", "Myth review"],
-    ["impact", "Impact console"],
-    ["outbound", "Messages sent"],
-  ],
-};
 function Shell({ children, title }: { children: ReactNode; title: string }) {
-  const { s, mutate, go, askConfirm, askText } = useApp();
+  const { s, mutate, go, route } = useApp();
+  const embedded = useContext(Embedded);
   const role = s.session.role!;
-  const desktop = ["doctor", "team"].includes(role);
+  const config = ROUTES[role];
   const [drawer, setDrawer] = useState(false);
+  const [switcher, setSwitcher] = useState(false);
   const p = E.patient(s);
   const unread = s.notifications.filter(
     (n) =>
@@ -229,39 +211,78 @@ function Shell({ children, title }: { children: ReactNode; title: string }) {
       n.status !== "queued" &&
       !n.read,
   ).length;
-  const extra =
-    role === "patient"
-      ? [
-          ["jasoos", "Sugar Detective"],
-          ["weekly", "Weekly check"],
-          ["mood", "Private mood"],
-          ["doctor", "Doctor & appointments"],
-          ["notes", "My notes"],
-          ["privacy", "Family & consent"],
-          ["my-data", "My data"],
-          ["billing", "Billing"],
-          ["band", "Wellness band"],
-          ["profile", "Profile"],
-          ["settings", "Settings"],
-          ["help", "Help & grievance"],
-        ]
-      : role === "caregiver"
-        ? [
-            ["choose", "Family members"],
-            ["connect", "Connect family"],
-            ["myth", "Myth buster"],
-            ["notes", "My notes"],
-            ["records", "Upload record"],
-            ["permissions", "Permissions"],
-            ["help", "Help"],
-          ]
-        : [
-            ["profile", "Profile & settings"],
-            ["help", "Help"],
-          ];
+  const logout = () => {
+    mutate((s) => {
+      s.session.role = null;
+      s.session.userId = "";
+    });
+    go("/");
+  };
+  const select = (item: { path: string; action?: string }) => {
+    setDrawer(false);
+    if (item.action === "switch") setSwitcher(true);
+    else go(`/${role}/${item.path}`);
+  };
+  const closeSwitcher = () => {
+    setSwitcher(false);
+    if (route.includes("switch=1")) go("/caregiver/home");
+  };
+  if (embedded)
+    return (
+      <section className="embedded-view">
+        <h2>{title}</h2>
+        {children}
+      </section>
+    );
+  const nav = (
+    <>
+      {config.nav.map((item, i) => (
+        <button
+          key={item.path}
+          onClick={() => select(item)}
+          className={
+            route.split("?")[0] === `/${role}/${item.path}` ? "active" : ""
+          }
+        >
+          {i === 0 ? (
+            <Home size={20} />
+          ) : i === 1 ? (
+            <Activity size={20} />
+          ) : i === 2 ? (
+            <FileText size={20} />
+          ) : (
+            <MessageCircle size={20} />
+          )}
+          <span>{item.label}</span>
+        </button>
+      ))}
+    </>
+  );
+  const groups = (
+    <>
+      {config.drawer.map((group) => (
+        <section key={group.title}>
+          <h3>{group.title}</h3>
+          {group.items.map((item) => (
+            <button
+              className="drawer-link"
+              key={item.path}
+              onClick={() => select(item)}
+            >
+              {item.label}
+              <ChevronRight size={18} />
+            </button>
+          ))}
+        </section>
+      ))}
+      <Btn secondary onClick={logout}>
+        Log out
+      </Btn>
+    </>
+  );
   return (
     <div
-      className={`m-app ${desktop ? "desktop" : "mobile"} role-${role} ${s.settings.large ? "extra-large" : ""}`}
+      className={`m-app ${role === "team" || role === "doctor" ? "desktop" : "mobile"} role-${role} ${s.settings.large ? "extra-large" : ""}`}
     >
       <a
         className="skip-link"
@@ -273,38 +294,11 @@ function Shell({ children, title }: { children: ReactNode; title: string }) {
       >
         Skip to content
       </a>
-      {desktop && (
+      {(role === "doctor" || role === "team") && (
         <aside className="m-sidebar">
-          <div className="m-brand">
-            ✚ pulse<span>CONTINUOUS CARE</span>
-          </div>
-          {navs[role].map(([path, label]) => (
-            <button
-              key={path}
-              className={location.hash.includes(path) ? "active" : ""}
-              onClick={() => go(`/${role}/${path}`)}
-            >
-              {label}
-              <ChevronRight size={16} />
-            </button>
-          ))}
-          {extra.map(([path, label]) => (
-            <button key={path} onClick={() => go(`/${role}/${path}`)}>
-              {label}
-            </button>
-          ))}
-          <Btn
-            secondary
-            onClick={() => {
-              mutate((s) => {
-                s.session.role = null;
-                s.session.userId = "";
-              });
-              go("/");
-            }}
-          >
-            Log out
-          </Btn>
+          <div className="m-brand">Pulse</div>
+          {nav}
+          {groups}
         </aside>
       )}
       <div className="m-main">
@@ -336,26 +330,20 @@ function Shell({ children, title }: { children: ReactNode; title: string }) {
         <main id="main" tabIndex={-1} className="m-content">
           {children}
         </main>
-        {!desktop && (
-          <nav className="m-bottom">
-            {navs[role].map(([path, label], i) => (
-              <button
-                key={path}
-                onClick={() => go(`/${role}/${path}`)}
-                className={location.hash.includes(path) ? "active" : ""}
-              >
-                {i === 0 ? (
-                  <Home size={20} />
-                ) : i === 1 ? (
-                  <Plus size={20} />
-                ) : i === 2 ? (
-                  <Activity size={20} />
-                ) : (
-                  <FileText size={20} />
-                )}
-                <span>{label}</span>
-              </button>
-            ))}
+        {config.floating && (
+          <button
+            className="log-fab"
+            onClick={() => go(`/${role}/${config.floating!.path}`)}
+          >
+            {config.floating.label}
+          </button>
+        )}
+        {role !== "team" && (
+          <nav
+            className={`m-bottom ${role === "doctor" ? "doctor-bottom" : ""}`}
+            aria-label="Main navigation"
+          >
+            {nav}
           </nav>
         )}
       </div>
@@ -373,37 +361,154 @@ function Shell({ children, title }: { children: ReactNode; title: string }) {
               Pulse ·{" "}
               {s.users?.[s.session.userId]?.name ||
                 roleNames[s.session.userId] ||
-                (role === "patient" ? p?.name : "Demo account")}
+                p?.name}
             </h2>
-            {[...navs[role], ...extra].map(([path, label]) => (
-              <button
-                className="drawer-link"
-                key={path}
-                onClick={() => {
-                  go(`/${role}/${path}`);
-                  setDrawer(false);
-                }}
-              >
-                {label}
-                <ChevronRight size={18} />
-              </button>
-            ))}
-            <Btn
-              secondary
-              onClick={() => {
-                mutate((s) => {
-                  s.session.role = null;
-                  s.session.userId = "";
-                });
-                go("/");
-              }}
-            >
-              Log out
-            </Btn>
+            {groups}
           </aside>
         </div>
       )}
+      {role === "caregiver" && (switcher || route.includes("switch=1")) && (
+        <div className="m-overlay" onClick={closeSwitcher}>
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label="Switch family member"
+            className="m-confirm-sheet"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2>Switch family member</h2>
+            {s.links
+              .filter(
+                (l) =>
+                  l.viewer === s.session.userId &&
+                  l.status === "approved" &&
+                  E.patient(s, l.patientId) &&
+                  !E.patient(s, l.patientId).deleted,
+              )
+              .map((l) => (
+                <Btn
+                  key={l.id}
+                  onClick={() => {
+                    mutate((s) => {
+                      s.session.patientId = l.patientId;
+                    });
+                    closeSwitcher();
+                  }}
+                >
+                  {E.patient(s, l.patientId).name}
+                </Btn>
+              ))}
+            <Btn secondary onClick={closeSwitcher}>
+              Close
+            </Btn>
+          </section>
+        </div>
+      )}
     </div>
+  );
+}
+function EmbeddedViews({ children }: { children: ReactNode }) {
+  return <Embedded.Provider value={true}>{children}</Embedded.Provider>;
+}
+function PatientFamily() {
+  return (
+    <Shell title="Family & privacy">
+      <EmbeddedViews>
+        <Privacy />
+        <MyData />
+      </EmbeddedViews>
+    </Shell>
+  );
+}
+function Settings() {
+  const { s } = useApp();
+  return (
+    <Shell title="Settings">
+      <EmbeddedViews>
+        <Utility kind="settings" />
+        {s.session.role === "patient" && <Band />}
+      </EmbeddedViews>
+    </Shell>
+  );
+}
+function PatientDoctor() {
+  const { route, go } = useApp();
+  const tab = new URLSearchParams(route.split("?")[1]).get("tab") || "messages";
+  return (
+    <Shell title="Doctor">
+      <div className="m-tabs" role="tablist" aria-label="Doctor sections">
+        {["messages", "appointments", "tests"].map((t) => (
+          <button
+            role="tab"
+            aria-selected={tab === t}
+            key={t}
+            onClick={() => go(`/patient/doctor?tab=${t}`)}
+          >
+            {t[0].toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </div>
+      <EmbeddedViews>
+        {tab === "appointments" ? (
+          <Appointments />
+        ) : tab === "tests" ? (
+          <PatientTests />
+        ) : (
+          <Messages />
+        )}
+      </EmbeddedViews>
+    </Shell>
+  );
+}
+function CaregiverNotes() {
+  const [report, setReport] = useState(false);
+  return (
+    <Shell title="Notes">
+      <Btn secondary onClick={() => setReport(!report)}>
+        {report ? "Close reports" : "Add a report"}
+      </Btn>
+      <EmbeddedViews>
+        {report && <Records initialUpload />}
+        <Notes />
+      </EmbeddedViews>
+    </Shell>
+  );
+}
+function CaregiverAlerts() {
+  return (
+    <Shell title="Alerts">
+      <EmbeddedViews>
+        <Caregiver alertsOnly />
+        <Notifications />
+      </EmbeddedViews>
+    </Shell>
+  );
+}
+function CareDesk() {
+  const { route, go } = useApp();
+  const tab = new URLSearchParams(route.split("?")[1]).get("tab") || "queue";
+  return (
+    <Shell title="Care desk">
+      <div className="m-tabs" role="tablist" aria-label="Care desk sections">
+        {[
+          ["queue", "Queue"],
+          ["review", "Case review"],
+          ["sent", "Messages sent"],
+        ].map(([id, label]) => (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={tab === id}
+            onClick={() => go(`/team/desk?tab=${id}`)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <EmbeddedViews>
+        {tab === "sent" ? <Utility kind="outbound" /> : <Desk />}
+      </EmbeddedViews>
+    </Shell>
   );
 }
 function Safety({ rule, onBack }: { rule?: string; onBack?: () => void }) {
@@ -1723,20 +1828,25 @@ function Progress() {
           })}
       </Card>
       <Water />
-      <Btn secondary onClick={() => go("/patient/band")}>
-        Wellness band
-      </Btn>
+      <EmbeddedViews>
+        <Billing proofOnly />
+        {E.patient(s).consents.band &&
+          s.band.filter((b) => b.patientId === pid && E.visible(b, s)).at(-1)
+            ?.status === "connected" && <Band />}
+      </EmbeddedViews>
     </Shell>
   );
 }
-function Records() {
+function Records({ initialUpload = false }: { initialUpload?: boolean } = {}) {
   const { s, mutate, toast, route, askConfirm, askText } = useApp();
   const pid = s.session.patientId,
     user = s.session.userId;
   const [tab, setTab] = useState("labs");
   const [preview, setPreview] = useState<E.Row | null>(null);
   const [query, setQuery] = useState("");
-  const [upload, setUpload] = useState(route.includes("upload"));
+  const [upload, setUpload] = useState(
+    initialUpload || route.includes("upload"),
+  );
   const [sample, setSample] = useState("lab_hba1c");
   const [value, setValue] = useState("8.1");
   const [file, setFile] = useState<File | null>(null);
@@ -2449,89 +2559,95 @@ function Billing({ proofOnly = false }: { proofOnly?: boolean }) {
           </Empty>
         )}
       </Card>
-      {failed && (
-        <Card title="Payment retry available">
-          <p>
-            Safety features continue.{" "}
-            {Math.max(0, 30 - (s.sim.day - failed.day))} days of grace remain.
-            Safety rules and crisis support stay accessible.
-          </p>
-        </Card>
-      )}
-      <Card
-        title={
-          pr.maintenance ? "Maintenance · 180 days" : "Care Cycle · 90 days"
-        }
-      >
-        <strong className="big-number">₹{price.toLocaleString("en-IN")}</strong>
-        <p>
-          {pr.guarantee
-            ? "Eligible for a free next cycle: change less than 0.3 points and at least eight checks."
-            : "Includes one home HbA1c test. Renewal requires an explicit payment."}
-        </p>
-        <p>Payer: Amit · synthetic UPI · no real money moves.</p>
-        {paid ? (
-          <>
-            <Badge>Paid · {paid.invoice}</Badge>
-            <Btn
-              secondary
-              onClick={() =>
-                download(
-                  "pulse-invoice.txt",
-                  `${paid.invoice}\n₹${paid.amount}\nSynthetic UPI payment\nGST as applicable — demo`,
-                  "text/plain",
-                )
-              }
-            >
-              Download invoice
-            </Btn>
-          </>
-        ) : waiting ? (
-          <>
-            <Badge>Waiting for demo UPI approval</Badge>
-            <div className="m-actions">
-              <Btn disabled={!s.sim.online} onClick={() => pay(true)}>
-                Simulate approval
-              </Btn>
-              <Btn secondary onClick={() => pay(false)}>
-                Simulate failure
-              </Btn>
-              <Btn secondary onClick={() => setWaiting(false)}>
-                Back
-              </Btn>
-            </div>
-          </>
-        ) : (
-          <>
-            <Field label="UPI ID" value={upi} onChange={setUpi} />
-            <Btn
-              disabled={!/^[\w.-]+@[\w.-]+$/.test(upi) || !s.sim.online}
-              onClick={() => {
-                mutate((s) => {
-                  if (
-                    !s.payments.some(
-                      (p) => p.patientId === pid && p.status === "pending",
+      {!proofOnly && (
+        <>
+          {failed && (
+            <Card title="Payment retry available">
+              <p>
+                Safety features continue.{" "}
+                {Math.max(0, 30 - (s.sim.day - failed.day))} days of grace
+                remain. Safety rules and crisis support stay accessible.
+              </p>
+            </Card>
+          )}
+          <Card
+            title={
+              pr.maintenance ? "Maintenance · 180 days" : "Care Cycle · 90 days"
+            }
+          >
+            <strong className="big-number">
+              ₹{price.toLocaleString("en-IN")}
+            </strong>
+            <p>
+              {pr.guarantee
+                ? "Eligible for a free next cycle: change less than 0.3 points and at least eight checks."
+                : "Includes one home HbA1c test. Renewal requires an explicit payment."}
+            </p>
+            <p>Payer: Amit · synthetic UPI · no real money moves.</p>
+            {paid ? (
+              <>
+                <Badge>Paid · {paid.invoice}</Badge>
+                <Btn
+                  secondary
+                  onClick={() =>
+                    download(
+                      "pulse-invoice.txt",
+                      `${paid.invoice}\n₹${paid.amount}\nSynthetic UPI payment\nGST as applicable — demo`,
+                      "text/plain",
                     )
-                  )
-                    s.payments.push({
-                      id: E.uid("PAY"),
-                      patientId: pid,
-                      ...E.stamp(s),
-                      amount: price,
-                      status: "pending",
+                  }
+                >
+                  Download invoice
+                </Btn>
+              </>
+            ) : waiting ? (
+              <>
+                <Badge>Waiting for demo UPI approval</Badge>
+                <div className="m-actions">
+                  <Btn disabled={!s.sim.online} onClick={() => pay(true)}>
+                    Simulate approval
+                  </Btn>
+                  <Btn secondary onClick={() => pay(false)}>
+                    Simulate failure
+                  </Btn>
+                  <Btn secondary onClick={() => setWaiting(false)}>
+                    Back
+                  </Btn>
+                </div>
+              </>
+            ) : (
+              <>
+                <Field label="UPI ID" value={upi} onChange={setUpi} />
+                <Btn
+                  disabled={!/^[\w.-]+@[\w.-]+$/.test(upi) || !s.sim.online}
+                  onClick={() => {
+                    mutate((s) => {
+                      if (
+                        !s.payments.some(
+                          (p) => p.patientId === pid && p.status === "pending",
+                        )
+                      )
+                        s.payments.push({
+                          id: E.uid("PAY"),
+                          patientId: pid,
+                          ...E.stamp(s),
+                          amount: price,
+                          status: "pending",
+                        });
                     });
-                });
-                setWaiting(true);
-              }}
-            >
-              Pay / renew in demo
-            </Btn>
-          </>
-        )}
-      </Card>
-      <Btn secondary onClick={() => go(`/${s.session.role}/home`)}>
-        Home
-      </Btn>
+                    setWaiting(true);
+                  }}
+                >
+                  Pay / renew in demo
+                </Btn>
+              </>
+            )}
+          </Card>
+          <Btn secondary onClick={() => go(`/${s.session.role}/home`)}>
+            Home
+          </Btn>
+        </>
+      )}
     </Shell>
   );
 }
@@ -2653,9 +2769,13 @@ function Notifications() {
       (s.session.role !== "caregiver" ||
         E.allow(s, user, n.patientId, n.category)),
   );
-  const filtered = list.filter(
-    (n) => filter === "all" || n.category === filter,
-  );
+  const filtered = list
+    .filter((n) => filter === "all" || n.category === filter)
+    .sort(
+      (a, b) =>
+        Number(b.category === "alerts") - Number(a.category === "alerts") ||
+        E.minutes(b.day, b.time) - E.minutes(a.day, a.time),
+    );
   return (
     <Shell title="Notifications">
       <div className="m-tabs">
@@ -2718,7 +2838,7 @@ function Notifications() {
     </Shell>
   );
 }
-function Caregiver() {
+function Caregiver({ alertsOnly = false }: { alertsOnly?: boolean } = {}) {
   const { s, mutate, go, askConfirm, askText } = useApp();
   const pid = s.session.patientId,
     user = s.session.userId;
@@ -2742,6 +2862,70 @@ function Caregiver() {
     (w) =>
       w.day >= 22 && w.day < 29 && s.sim.day - w.day < 7 && w.habitDays < 4,
   );
+  if (alertsOnly)
+    return (
+      <Shell title="Shared safety alerts">
+        {alerts.map((a) => (
+          <Card key={a.id} title={`Safety ${a.rule}`}>
+            <p>
+              {a.value ?? ""} {a.value ? "mg/dL" : ""} · {a.status} · {a.owner}
+            </p>
+            <ul className="timeline">
+              {a.timeline.map((t: any, i: number) => (
+                <li key={i}>
+                  {t.time} · {t.text}
+                </li>
+              ))}
+            </ul>
+            <div className="m-actions">
+              <a className="m-btn" href={`tel:${p.mobile}`}>
+                Call patient
+              </a>
+              <a
+                className="m-btn secondary"
+                href={`tel:${E.safetyContact(s, pid).phone}`}
+              >
+                Call local contact
+              </a>
+              <a className="m-btn secondary" href="tel:9876500002">
+                Call clinic
+              </a>
+              <Btn
+                secondary
+                onClick={() =>
+                  mutate((s) => {
+                    const target = s.alerts.find((r) => r.id === a.id)!;
+                    if (target.status === "open") {
+                      target.status = "acknowledged";
+                      target.owner =
+                        s.users?.[user]?.name ||
+                        roleNames[user]?.split(" · ")[0] ||
+                        "Caregiver";
+                      target.timeline.push({
+                        ...E.stamp(s),
+                        text: `${target.owner} is handling this`,
+                      });
+                    }
+                  })
+                }
+              >
+                I’ve spoken to them
+              </Btn>
+            </div>
+            {s.users?.[user]?.city === "Kanpur" ? (
+              <a className="m-btn danger" href="tel:112">
+                Call 112
+              </a>
+            ) : (
+              <p className="m-hint">
+                You’re outside Kanpur. The person near them should call 112.
+              </p>
+            )}
+          </Card>
+        ))}
+        {!alerts.length && <Empty>No active shared alerts.</Empty>}
+      </Shell>
+    );
   return (
     <Shell title="Family care">
       <div className="family-switch">
@@ -3585,7 +3769,7 @@ function DoctorPatient() {
   const { s, mutate, go, route, askConfirm, askText } = useApp();
   const pid = route.split("/")[3] || s.session.patientId;
   const p = E.patient(s, pid);
-  const tab = route.split("/")[4] || "overview";
+  const tab = route.split("?")[0].split("/")[4] || "overview";
   const [note, setNote] = useState("");
   const [node, setNode] = useState<E.Row | null>(null);
   const user = s.session.userId;
@@ -3599,17 +3783,108 @@ function DoctorPatient() {
   const fasting = readings.filter((r) => r.context === "fasting");
   const avg = (a: E.Row[]) =>
     a.length ? Math.round(a.reduce((n, r) => n + r.value, 0) / a.length) : "—";
-  const tabs = [
-    "overview",
-    "map",
-    "charts",
-    "reports",
-    "prescriptions",
-    "tests",
-    "notes",
-    "mood",
-    "messages",
-  ];
+  const tabs = PROFILE_TABS;
+  const reportsView = (
+    <Card title="Reports verification">
+      {[...labs, ...docs].map((r) => (
+        <div className="m-row" key={r.id}>
+          <div>
+            <b>{r.title || `HbA1c ${r.value}%`}</b>
+            <small>
+              {E.date(r.day)} ·{" "}
+              {r.verified ? "Verified" : "Unverified — excluded from proof"}
+            </small>
+          </div>
+          {!r.verified && (
+            <>
+              <Btn
+                onClick={() =>
+                  mutate((s) => {
+                    for (const x of [...s.labs, ...s.documents])
+                      if (x.id === r.id || x.documentId === r.id)
+                        x.verified = true;
+                  })
+                }
+              >
+                Verify
+              </Btn>
+              <Btn
+                secondary
+                onClick={() =>
+                  mutate((s) => {
+                    s.labs = s.labs.filter(
+                      (x) => x.id !== r.id && x.documentId !== r.id,
+                    );
+                    s.documents = s.documents.filter((x) => x.id !== r.id);
+                  })
+                }
+              >
+                Reject
+              </Btn>
+            </>
+          )}
+        </div>
+      ))}
+    </Card>
+  );
+  const notesView = (
+    <>
+      <Card title="My private doctor notes" privateCard>
+        <textarea
+          aria-label="Doctor private note"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+        />
+        <Btn
+          disabled={!note.trim()}
+          onClick={() => {
+            mutate((s) =>
+              s.notes.push({
+                id: E.uid("DN"),
+                patientId: pid,
+                ...E.stamp(s),
+                text: note,
+                owner: user,
+                shared: false,
+              }),
+            );
+            setNote("");
+          }}
+        >
+          Save private note
+        </Btn>
+        {s.notes
+          .filter(
+            (n) => n.owner === user && n.patientId === pid && E.visible(n, s),
+          )
+          .map((n) => (
+            <p key={n.id}>{n.text}</p>
+          ))}
+      </Card>
+      <Card title="Shared with me">
+        {s.notes
+          .filter((n) => n.patientId === pid && n.shared && E.visible(n, s))
+          .map((n) => (
+            <p key={n.id}>
+              {n.text} · {roleNames[n.owner] || n.owner}
+            </p>
+          ))}
+      </Card>
+    </>
+  );
+  const moodView = E.allow(s, user, pid, "mood") ? (
+    <Card title="Mood (shared by patient)" privateCard>
+      {E.allow(s, user, pid, "mood") ? (
+        mood.map((m) => (
+          <p key={m.id}>
+            {m.instrument} · {m.score} · {E.date(m.day)}
+          </p>
+        ))
+      ) : (
+        <Empty>Not shared by patient.</Empty>
+      )}
+    </Card>
+  ) : null;
   return (
     <Shell title="Patient profile">
       {!allowed ? (
@@ -3640,18 +3915,19 @@ function DoctorPatient() {
             </div>
           </div>
           <div className="m-tabs">
-            {tabs.map((t) => (
+            {tabs.map(({ path: t, label }) => (
               <button
                 key={t}
                 className={tab === t ? "active" : ""}
                 onClick={() => go(`/doctor/patient/${pid}/${t}`)}
               >
-                {t}
+                {label}
               </button>
             ))}
           </div>
           {tab === "overview" ? (
             <>
+              {moodView}
               <Card title="Since last in-person visit">
                 <p>
                   {p.inPerson === null
@@ -3728,16 +4004,6 @@ function DoctorPatient() {
                       </Btn>
                     </div>
                   ))}
-              </Card>
-              <Card title="Mood sharing" privateCard>
-                {E.allow(s, user, pid, "mood") ? (
-                  <p>
-                    Latest PHQ score {mood.at(-1)?.score ?? "—"} · patient
-                    granted separate consent.
-                  </p>
-                ) : (
-                  <p>🔒 Not shared by patient</p>
-                )}
               </Card>
             </>
           ) : tab === "map" ? (
@@ -3851,52 +4117,11 @@ function DoctorPatient() {
               </svg>
               <p>n={fasting.length} · own glucometer</p>
             </Card>
-          ) : tab === "reports" ? (
-            <Card title="Reports verification">
-              {[...labs, ...docs].map((r) => (
-                <div className="m-row" key={r.id}>
-                  <div>
-                    <b>{r.title || `HbA1c ${r.value}%`}</b>
-                    <small>
-                      {E.date(r.day)} ·{" "}
-                      {r.verified
-                        ? "Verified"
-                        : "Unverified — excluded from proof"}
-                    </small>
-                  </div>
-                  {!r.verified && (
-                    <>
-                      <Btn
-                        onClick={() =>
-                          mutate((s) => {
-                            for (const x of [...s.labs, ...s.documents])
-                              if (x.id === r.id || x.documentId === r.id)
-                                x.verified = true;
-                          })
-                        }
-                      >
-                        Verify
-                      </Btn>
-                      <Btn
-                        secondary
-                        onClick={() =>
-                          mutate((s) => {
-                            s.labs = s.labs.filter(
-                              (x) => x.id !== r.id && x.documentId !== r.id,
-                            );
-                            s.documents = s.documents.filter(
-                              (x) => x.id !== r.id,
-                            );
-                          })
-                        }
-                      >
-                        Reject
-                      </Btn>
-                    </>
-                  )}
-                </div>
-              ))}
-            </Card>
+          ) : tab === "records" ? (
+            <>
+              {reportsView}
+              <TestsOrders pid={pid} />
+            </>
           ) : tab === "prescriptions" ? (
             <Card title="Signed prescriptions">
               {E.view(s, user, pid, "medicines", s.prescriptions).map((r) => (
@@ -3911,71 +4136,11 @@ function DoctorPatient() {
                 Compose prescription
               </Btn>
             </Card>
-          ) : tab === "tests" ? (
-            <TestsOrders pid={pid} />
-          ) : tab === "notes" ? (
-            <>
-              <Card title="My private doctor notes" privateCard>
-                <textarea
-                  aria-label="Doctor private note"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                />
-                <Btn
-                  disabled={!note.trim()}
-                  onClick={() => {
-                    mutate((s) =>
-                      s.notes.push({
-                        id: E.uid("DN"),
-                        patientId: pid,
-                        ...E.stamp(s),
-                        text: note,
-                        owner: user,
-                        shared: false,
-                      }),
-                    );
-                    setNote("");
-                  }}
-                >
-                  Save private note
-                </Btn>
-                {s.notes
-                  .filter(
-                    (n) =>
-                      n.owner === user &&
-                      n.patientId === pid &&
-                      E.visible(n, s),
-                  )
-                  .map((n) => (
-                    <p key={n.id}>{n.text}</p>
-                  ))}
-              </Card>
-              <Card title="Shared with me">
-                {s.notes
-                  .filter(
-                    (n) => n.patientId === pid && n.shared && E.visible(n, s),
-                  )
-                  .map((n) => (
-                    <p key={n.id}>
-                      {n.text} · {roleNames[n.owner] || n.owner}
-                    </p>
-                  ))}
-              </Card>
-            </>
-          ) : tab === "mood" ? (
-            <Card title="Mood · separate consent" privateCard>
-              {E.allow(s, user, pid, "mood") ? (
-                mood.map((m) => (
-                  <p key={m.id}>
-                    {m.instrument} · {m.score} · {E.date(m.day)}
-                  </p>
-                ))
-              ) : (
-                <Empty>Not shared by patient.</Empty>
-              )}
-            </Card>
           ) : (
-            <InlineMessages pid={pid} />
+            <>
+              {notesView}
+              <InlineMessages pid={pid} />
+            </>
           )}
         </>
       )}
@@ -4423,7 +4588,8 @@ function TestsOrders({ pid }: { pid: string }) {
 }
 function Desk() {
   const { s, mutate, toast, route, askConfirm, askText } = useApp();
-  const caseReview = route.includes("case-review");
+  const caseReview =
+    new URLSearchParams(route.split("?")[1]).get("tab") === "review";
   const [selected, setSelected] = useState("");
   const [note, setNote] = useState("");
   const list = s.alerts
@@ -5006,9 +5172,9 @@ function Band() {
     </Shell>
   );
 }
-function Utility() {
+function Utility({ kind }: { kind?: string } = {}) {
   const { s, mutate, go, toast, route, askConfirm, askText } = useApp();
-  const page = route.split("/")[2];
+  const page = kind || route.split("?")[0].split("/")[2];
   const role = s.session.role;
   const p = E.patient(s);
   const [name, setName] = useState(p?.name || "");
@@ -5628,27 +5794,7 @@ function Auth({ role }: { role: E.Role }) {
     </div>
   );
 }
-const guide: [string, E.Role, string, number][] = [
-  ["Start with Ramesh’s consent", "patient", "privacy", 0],
-  ["Review the six-evening result", "patient", "jasoos", 10],
-  ["Amit sees permitted progress", "caregiver", "home", 10],
-  ["Week-3 support", "patient", "weekly", 22],
-  ["Pooja’s care desk", "team", "desk", 22],
-  ["Type a crisis message to the doctor", "patient", "doctor", 30],
-  ["Dr. Verma reviews fasting pattern", "doctor", "home", 45],
-  ["Inject low sugar using DEMO", "patient", "home", 45],
-  ["Amit handles the alert", "caregiver", "home", 45],
-  ["Review Day-90 Health Map", "doctor", `patient/${E.P}/map`, 90],
-  [
-    "Sign a renewal with PIN 246810",
-    "doctor",
-    `patient/${E.P}/prescriptions/new`,
-    90,
-  ],
-  ["Ramesh’s Proof Card", "patient", "proof", 90],
-  ["Amit renews in demo UPI", "caregiver", "billing", 90],
-  ["Show synthetic impact", "team", "impact", 90],
-];
+const guide = GUIDE;
 function Demo() {
   const { s, mutate, login, go, toast, askConfirm, askText } = useApp();
   const [open, setOpen] = useState(false);
@@ -5776,6 +5922,12 @@ function Demo() {
         E.weekly(s, { habitDays: 3, missed: 3, feeling: "tired" });
       s.session.patientId = oldPid;
     });
+    const target = SCENARIOS[kind];
+    if (target) {
+      login(target.role, target.userId);
+      go(`/${target.role}/${target.path}`);
+      setOpen(false);
+    }
     toast(`Injected: ${kind}`);
   };
   return (
@@ -5827,6 +5979,7 @@ function Demo() {
             </button>
             <h2>Demo controls</h2>
             <p>Not part of the product · synthetic data only</p>
+            <h3>Day & time</h3>
             <Field
               label="Simulated day 0–120"
               type="number"
@@ -5844,7 +5997,7 @@ function Demo() {
               }
             />
             <div className="day-chips">
-              {[0, 1, 3, 10, 14, 22, 30, 45, 52, 85, 88, 90].map((day) => (
+              {[0, 3, 10, 22, 45, 48, 85, 90].map((day) => (
                 <button
                   key={day}
                   onClick={() => mutate((s) => E.advance(s, day, s.sim.time))}
@@ -5861,16 +6014,7 @@ function Demo() {
                 mutate((s) => E.advance(s, s.sim.day, v))
               }
             />
-            <Toggle
-              label="Online"
-              on={s.sim.online}
-              onChange={() =>
-                mutate((s) =>
-                  s.sim.online ? (s.sim.online = false) : E.sync(s),
-                )
-              }
-            />
-            <h3>Switch role</h3>
+            <h3>Act as</h3>
             <div className="m-grid">
               {[
                 [E.P, "patient"],
@@ -5879,7 +6023,6 @@ function Demo() {
                 ["DR-0001", "doctor"],
                 ["DR-0002", "doctor"],
                 ["TEAM", "team"],
-                ["FOUNDER", "team"],
               ].map(([id, role]) => (
                 <Btn
                   key={id}
@@ -5893,7 +6036,7 @@ function Demo() {
                 </Btn>
               ))}
             </div>
-            <h3>Inject a scenario</h3>
+            <h3>Scenarios</h3>
             <Field
               label="Custom lab HbA1c 4–15"
               type="number"
@@ -5901,22 +6044,7 @@ function Demo() {
               onChange={setValue}
             />
             <div className="m-grid">
-              {[
-                "Low 52",
-                "Meter LO",
-                "High 320 + vomiting",
-                "Stale low",
-                "Crisis message",
-                "3 missed tablets",
-                "Fasting 74 + 77",
-                "Band disconnected",
-                "Payment failed",
-                "Caregiver request",
-                "Unknown myth",
-                "Doctor reply",
-                "Lab result",
-                "Revoke Neha",
-              ].map((k) => (
+              {Object.keys(SCENARIOS).map((k) => (
                 <Btn
                   key={k}
                   secondary
@@ -5930,6 +6058,15 @@ function Demo() {
                 </Btn>
               ))}
             </div>
+            <Toggle
+              label="Offline"
+              on={!s.sim.online}
+              onChange={() =>
+                mutate((s) =>
+                  s.sim.online ? (s.sim.online = false) : E.sync(s),
+                )
+              }
+            />
             <div className="m-stack">
               <Btn
                 onClick={() => {
@@ -6048,7 +6185,9 @@ export default function App() {
       return E.seed();
     }
   });
-  const [route, setRoute] = useState(location.hash.slice(1) || "/");
+  const [route, setRoute] = useState(
+    resolveRoute(location.hash.slice(1) || "/"),
+  );
   const [message, setMessage] = useState("");
   const [locked, setLocked] = useState(false);
   const [unlock, setUnlock] = useState("");
@@ -6065,7 +6204,8 @@ export default function App() {
     stateRef.current = next;
     setState(next);
   };
-  const go = (path: string) => {
+  const go = (input: string) => {
+    const path = resolveRoute(input);
     if (path !== routeRef.current) setLoading(true);
     location.hash = `#${path}`;
     setRoute(path);
@@ -6118,8 +6258,13 @@ export default function App() {
     go(`/${role}/${role === "team" ? "desk" : "home"}`);
   };
   useEffect(() => {
+    const initial = resolveRoute(location.hash.slice(1) || "/");
+    if (location.hash !== `#${initial}`)
+      history.replaceState(null, "", `#${initial}`);
     const change = () => {
-      const next = location.hash.slice(1) || "/";
+      const next = resolveRoute(location.hash.slice(1) || "/");
+      if (location.hash !== `#${next}`)
+        history.replaceState(null, "", `#${next}`);
       if (next !== routeRef.current) {
         setLoading(true);
         setRoute(next);
@@ -6206,7 +6351,11 @@ export default function App() {
                 "sprint",
                 "records",
                 "medicines",
-                ...(route.includes("/mood") ? ["mood"] : []),
+                ...(route.includes("/patient/") &&
+                (!route.split("/")[4] || route.endsWith("/overview")) &&
+                E.allow(s, s.session.userId, pid, "mood")
+                  ? ["mood"]
+                  : []),
               ]
             : route.includes("desk")
               ? ["alerts"]
@@ -6223,81 +6372,27 @@ export default function App() {
       authDoctor: "/doctor/login",
       launch: "/",
     };
-    go(map[key] || "/");
+    go(key.startsWith("/") ? key : map[key] || "/");
   };
   const role = route.split("/")[1] as E.Role;
   const page = route.split("?")[0].split("/")[2] || "home";
-  const allowedPages: Record<E.Role, string[]> = {
-    patient: [
-      "home",
-      "log",
-      "jasoos",
-      "weekly",
-      "mood",
-      "crisis",
-      "safety",
-      "progress",
-      "medicines",
-      "records",
-      "notes",
-      "privacy",
-      "my-data",
-      "billing",
-      "proof",
-      "doctor",
-      "messages",
-      "appointments",
-      "tests",
-      "myth",
-      "notifications",
-      "band",
-      "settings",
-      "profile",
-      "help",
-    ],
-    caregiver: [
-      "home",
-      "care",
-      "choose",
-      "connect",
-      "permissions",
-      "alerts",
-      "billing",
-      "records",
-      "notes",
-      "myth",
-      "notifications",
-      "profile",
-      "help",
-    ],
-    doctor: [
-      "home",
-      "patients",
-      "patient",
-      "appointments",
-      "messages",
-      "outcomes",
-      "notifications",
-      "profile",
-      "settings",
-      "help",
-    ],
-    team: [
-      "home",
-      "desk",
-      "case-review",
-      "myths",
-      "impact",
-      "outbound",
-      "notifications",
-      "profile",
-      "help",
-    ],
-  };
+  const pages = ROUTES[role] ? allowedPages(role) : [];
   let content: ReactNode;
   if (route === "/")
     content = <Launch quickLogin={login} navigate={launchNav} />;
   else if (route === "/dev/tests") content = <TestsPage />;
+  else if (route === "/terms" || route === "/complaints")
+    content = (
+      <div className="m-auth">
+        <h1>{route === "/terms" ? "Prototype terms" : "Complaints"}</h1>
+        <p>
+          {route === "/terms"
+            ? "Pulse is a synthetic hackathon demonstration. It does not diagnose or prescribe. Your doctor decides."
+            : "For a demo complaint, contact the care team or sign in and use Help & complaints. You can also complain to the Data Protection Board of India."}
+        </p>
+        <Btn onClick={() => go("/")}>Home</Btn>
+      </div>
+    );
   else if (route === "/privacy-notice")
     content = (
       <div className="m-auth">
@@ -6384,14 +6479,14 @@ export default function App() {
     role === "doctor" &&
     !s.doctors[s.session.userId]?.verified &&
     page !== "home" &&
-    page !== "profile"
+    page !== "settings"
   )
     content = (
       <Shell title="Verification pending">
         <Empty>Patient data and prescribing unlock after verification.</Empty>
       </Shell>
     );
-  else if (!allowedPages[role].includes(page))
+  else if (!pages.includes(page))
     content = (
       <Shell title="Page not found">
         <Empty>This route is not available for this role.</Empty>
@@ -6421,13 +6516,13 @@ export default function App() {
         <Desk />
       );
   else if (page === "log") content = <Log />;
-  else if (page === "jasoos") content = <Sprint />;
+  else if (page === "sugar-detective") content = <Sprint />;
   else if (page === "weekly") content = <Weekly />;
   else if (page === "mood") content = <Mood />;
   else if (page === "crisis" || page === "safety" || page === "alerts")
     content =
       role === "caregiver" ? (
-        <Caregiver />
+        <CaregiverAlerts />
       ) : (
         <Shell title="Safety support">
           <Safety rule={page === "crisis" ? "S7" : undefined} />
@@ -6441,9 +6536,12 @@ export default function App() {
       </Shell>
     );
   else if (page === "records") content = <Records />;
-  else if (page === "notes") content = <Notes />;
-  else if (page === "privacy") content = <Privacy />;
-  else if (page === "my-data") content = <MyData />;
+  else if (page === "notes")
+    content = role === "caregiver" ? <CaregiverNotes /> : <Notes />;
+  else if (page === "family")
+    content =
+      role === "patient" ? <PatientFamily /> : <Utility kind="permissions" />;
+  else if (page === "settings") content = <Settings />;
   else if (page === "billing" || page === "proof")
     content =
       role === "caregiver" &&
@@ -6455,7 +6553,8 @@ export default function App() {
         <Billing proofOnly={page === "proof"} />
       );
   else if (page === "tests") content = <PatientTests />;
-  else if (page === "doctor" || page === "messages") content = <Messages />;
+  else if (page === "doctor") content = <PatientDoctor />;
+  else if (page === "messages") content = <Messages />;
   else if (page === "appointments") content = <Appointments />;
   else if (page === "myth") content = <Myth />;
   else if (page === "patients") content = <Registry />;
@@ -6475,7 +6574,7 @@ export default function App() {
     );
   else if (page === "patient")
     content = route.includes("/prescriptions/new") ? <Rx /> : <DoctorPatient />;
-  else if (page === "desk" || page === "case-review") content = <Desk />;
+  else if (page === "desk") content = <CareDesk />;
   else if (page === "myths") content = <MythReview />;
   else if (page === "impact" || page === "outcomes") content = <Impact />;
   else if (page === "notifications") content = <Notifications />;

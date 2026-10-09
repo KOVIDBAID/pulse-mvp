@@ -1,0 +1,2 @@
+$ node qa/no-devanagari.mjs
+No Devanagari outside the allowlist

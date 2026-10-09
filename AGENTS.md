@@ -7,7 +7,7 @@ Read README.md and REQUIREMENTS_AUDIT.md before changing scope. This repository 
 - src/App.tsx: React screens, shared-state context, local persistence, routing and demo controls.
 - src/lib/engine.ts: pure safety/privacy/sprint/cycle/prescription/cohort calculations and seed.
 - src/lib/selfTests.ts + tests/run.mjs: executable rule checks, also visible at #/dev/tests.
-- src/Launch.tsx: English Figma landing visual.
+- src/Launch.tsx: minimal English role entry and emergency links.
 - src/RxPreview.tsx: printable A4 synthetic prescription.
 - src/content: English labels only.
 - src/mvp.css: active workflow layouts; index.css/extended.css retain export styles.
@@ -25,3 +25,9 @@ Store habitId, never display text as a logic key: walk_after_dinner, veg_dal_fir
 Run pnpm typecheck, pnpm test, pnpm build, pnpm qa:static and pnpm qa after relevant refactors. qa/run-all.mjs owns its preview server on port 5173. qa/baseline.txt is an immutable before record.
 
 For migrated non-English saved input, preserve `_legacyText` on the same record for the patient export; display an English review notice and never invent a medicine translation. `storedText` supplies the original symptoms to safety rules. Keep migration idempotent for versions 3 and 4. QA must verify readiness from its own preview process and the built HTML, fail on occupied ports, and await cleanup. `PULSE_QA_PORT` is an explicit override (default 5173).
+
+## Navigation invariants
+
+Use src/app/routes.ts as the single source for role navigation, drawers, floating actions, hidden routes, redirects, scenarios and the guide. Regenerate qa/routes.json with node qa/sync-routes.mjs. Keep old hash routes redirecting, including query-selected merged tabs. Family/privacy/data rights, doctor messages/appointments/tests, caregiver notes/report upload and care desk tabs are merged features, not removed features.
+
+Doctor navigation uses a bottom bar below 900px and the same sidebar items at 900px and above. The six patient-profile tabs have no mood tab; the plum Overview mood card requires separate doctorMood consent. Preserve upload exclusions for caregivers. Run node qa/run-all.mjs ia for redirects, scenario destinations, responsive layout, consent and the 14-step guided journey, alongside the existing gates.
