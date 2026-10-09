@@ -12,7 +12,6 @@
       "/patient/doctor",
       "/patient/log",
       "/patient/sugar-detective",
-      "/patient/weekly",
       "/patient/mood",
       "/patient/myth",
       "/patient/notes",
@@ -64,8 +63,6 @@
     },
     "routes": [
       "/team/desk",
-      "/team/myths",
-      "/team/impact",
       "/team/settings",
       "/team/help"
     ]

@@ -1,3 +1,4 @@
+import { FEATURES, featureVisible } from "./features";
 export type Role = "patient" | "caregiver" | "doctor" | "team";
 export type Destination = { path: string; label: string; action?: "switch" };
 const d = (path: string, label: string): Destination => ({ path, label });
@@ -23,7 +24,9 @@ export const ROUTES: Record<
         title: "My care",
         items: [
           d("sugar-detective", "Sugar Detective"),
-          d("weekly", "Sunday check"),
+          ...(FEATURES.weeklyQuestionnaire
+            ? [d("weekly", "Sunday check")]
+            : []),
           d("mood", "Mood check — private"),
           d("myth", "True or false?"),
           d("notes", "My notes"),
@@ -43,6 +46,7 @@ export const ROUTES: Record<
     hidden: ["safety", "crisis", "proof", "notifications"],
     redirects: {
       jasoos: "sugar-detective",
+      ...(!FEATURES.weeklyQuestionnaire ? { weekly: "home" } : {}),
       privacy: "family",
       "my-data": "family",
       profile: "settings",
@@ -108,22 +112,18 @@ export const ROUTES: Record<
     redirects: { profile: "settings", notifications: "home" },
   },
   team: {
-    nav: [
-      d("desk", "Care desk"),
-      d("myths", "Myth review"),
-      d("impact", "Impact"),
-    ],
+    nav: [d("desk", "Care desk")],
     drawer: [
       {
         title: "Account",
         items: [d("settings", "Settings"), d("help", "Help")],
       },
     ],
-    hidden: [],
+    hidden: ["myths", "impact"],
     redirects: {
       home: "desk",
-      "case-review": "desk?tab=review",
-      outbound: "desk?tab=sent",
+      "case-review": "desk",
+      outbound: FEATURES.teamOutboundLog ? "desk?tab=sent" : "desk",
       notifications: "desk",
       profile: "settings",
     },
@@ -168,7 +168,7 @@ export function visibleRoutes(role: Role): string[] {
         ...(ROUTES[role].floating ? [ROUTES[role].floating!] : []),
         ...ROUTES[role].drawer.flatMap((g) => g.items),
       ]
-        .filter((x) => !x.action)
+        .filter((x) => !x.action && featureVisible(x.path.split("?")[0]))
         .map((x) => `/${role}/${x.path}`),
     ),
   ];
@@ -186,7 +186,14 @@ export const GUIDE: [string, Role, string, number][] = [
   ["Ramesh chooses family sharing", "patient", "family", 0],
   ["Review the six-evening walking result", "patient", "sugar-detective", 10],
   ["Amit sees permitted progress", "caregiver", "home", 10],
-  ["Ramesh’s Sunday check", "patient", "weekly", 22],
+  [
+    FEATURES.weeklyQuestionnaire
+      ? "Ramesh’s Sunday check"
+      : "Ramesh reviews Today",
+    "patient",
+    FEATURES.weeklyQuestionnaire ? "weekly" : "home",
+    22,
+  ],
   ["Pooja reviews the support queue", "team", "desk", 22],
   ["Ramesh sends a private message to his doctor", "patient", "doctor", 22],
   ["Dr. Verma reviews Today", "doctor", "home", 45],

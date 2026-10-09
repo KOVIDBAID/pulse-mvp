@@ -35,6 +35,7 @@ import {
   resolveRoute,
   allowedPages,
 } from "./app/routes";
+import { FEATURES, featureVisible } from "./app/features";
 import * as E from "./lib/engine";
 import { selfTests } from "./lib/selfTests";
 import "./extended.css";
@@ -263,16 +264,22 @@ function Shell({ children, title }: { children: ReactNode; title: string }) {
       {config.drawer.map((group) => (
         <section key={group.title}>
           <h3>{group.title}</h3>
-          {group.items.map((item) => (
-            <button
-              className="drawer-link"
-              key={item.path}
-              onClick={() => select(item)}
-            >
-              {item.label}
-              <ChevronRight size={18} />
-            </button>
-          ))}
+          {group.items
+            .filter(
+              (item) =>
+                featureVisible(item.path.split("?")[0]) &&
+                (item.path !== "sugar-detective" || !!p?.habitId),
+            )
+            .map((item) => (
+              <button
+                className="drawer-link"
+                key={item.path}
+                onClick={() => select(item)}
+              >
+                {item.label}
+                <ChevronRight size={18} />
+              </button>
+            ))}
         </section>
       ))}
       <Btn secondary onClick={logout}>
@@ -426,7 +433,7 @@ function Settings() {
     <Shell title="Settings">
       <EmbeddedViews>
         <Utility kind="settings" />
-        {s.session.role === "patient" && <Band />}
+        {FEATURES.wellnessBand && s.session.role === "patient" && <Band />}
       </EmbeddedViews>
     </Shell>
   );
@@ -485,32 +492,24 @@ function CaregiverAlerts() {
   );
 }
 function CareDesk() {
-  const { route, go } = useApp();
-  const tab = new URLSearchParams(route.split("?")[1]).get("tab") || "queue";
+  const { route } = useApp();
+  if (FEATURES.teamOutboundLog && route.includes("tab=sent"))
+    return (
+      <Shell title="Care desk">
+        <EmbeddedViews>
+          <Utility kind="outbound" />
+        </EmbeddedViews>
+      </Shell>
+    );
   return (
     <Shell title="Care desk">
-      <div className="m-tabs" role="tablist" aria-label="Care desk sections">
-        {[
-          ["queue", "Queue"],
-          ["review", "Case review"],
-          ["sent", "Messages sent"],
-        ].map(([id, label]) => (
-          <button
-            key={id}
-            role="tab"
-            aria-selected={tab === id}
-            onClick={() => go(`/team/desk?tab=${id}`)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
       <EmbeddedViews>
-        {tab === "sent" ? <Utility kind="outbound" /> : <Desk />}
+        <Desk />
       </EmbeddedViews>
     </Shell>
   );
 }
+
 function Safety({ rule, onBack }: { rule?: string; onBack?: () => void }) {
   const { s, mutate, go, askConfirm, askText } = useApp();
   const alerts = s.alerts.filter(
@@ -840,12 +839,14 @@ function PatientHome() {
             Log glucose
           </Btn>
         </Card>
-        <Card title="Sunday check">
-          <p>One small update about your week.</p>
-          <Btn secondary onClick={() => go("/patient/weekly")}>
-            Weekly check
-          </Btn>
-        </Card>
+        {FEATURES.weeklyQuestionnaire && (
+          <Card title="Sunday check">
+            <p>One small update about your week.</p>
+            <Btn secondary onClick={() => go("/patient/weekly")}>
+              Weekly check
+            </Btn>
+          </Card>
+        )}
       </div>
       <div className="m-actions">
         <Btn secondary onClick={() => go("/patient/doctor")}>
@@ -982,21 +983,37 @@ function Log() {
               ["meal", "Meal photo"],
               ["note", "Private note"],
               ["report", "Lab report"],
-            ].map(([k, t]) => (
-              <Btn
-                secondary
-                key={k}
-                onClick={() => {
-                  if (k === "note") go("/patient/notes");
-                  else if (k === "report") go("/patient/records/upload");
-                  else if (k === "medicine") go("/patient/medicines");
-                  else setKind(k);
-                }}
-              >
-                {t}
-              </Btn>
-            ))}
+            ]
+              .filter(
+                ([k]) =>
+                  k !== "weight" &&
+                  (k !== "meal" || FEATURES.mealPhotos) &&
+                  (k !== "water" || FEATURES.manualWater) &&
+                  (k !== "note" || FEATURES.privateNotes),
+              )
+              .map(([k, t]) => (
+                <Btn
+                  secondary
+                  key={k}
+                  onClick={() => {
+                    if (k === "note") go("/patient/notes");
+                    else if (k === "report") go("/patient/records/upload");
+                    else if (k === "medicine") go("/patient/medicines");
+                    else setKind(k);
+                  }}
+                >
+                  {t}
+                </Btn>
+              ))}
           </div>
+          {FEATURES.manualWeightBp && (
+            <details>
+              <summary>More</summary>
+              <Btn secondary onClick={() => setKind("weight")}>
+                Weight & BP
+              </Btn>
+            </details>
+          )}
         </>
       ) : kind === "glucose" ? (
         <Card title="Sugar reading · seen by you and the doctors you allow">
@@ -1218,6 +1235,7 @@ function Water() {
     (r) => r.patientId === pid && r.day === s.sim.day && E.visible(r, s),
   );
   const count = rows.reduce((sum, r) => sum + r.amount, 0);
+  if (!FEATURES.manualWater) return null;
   return (
     <Card title="Water · logged by you">
       <strong className="big-number">{count}</strong>
@@ -3769,7 +3787,9 @@ function DoctorPatient() {
   const { s, mutate, go, route, askConfirm, askText } = useApp();
   const pid = route.split("/")[3] || s.session.patientId;
   const p = E.patient(s, pid);
-  const tab = route.split("?")[0].split("/")[4] || "overview";
+  const tab =
+    route.split("?")[0].split("/")[4] ||
+    (FEATURES.healthMapDefault ? "map" : "overview");
   const [note, setNote] = useState("");
   const [node, setNode] = useState<E.Row | null>(null);
   const user = s.session.userId;

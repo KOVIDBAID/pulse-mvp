@@ -15,7 +15,8 @@
     "qa:sweep": "node qa/sweep.mjs",
     "qa:clicks": "node qa/clicks.mjs",
     "qa": "pnpm build && node qa/run-all.mjs sweep",
-    "qa:all": "pnpm build && node qa/run-all.mjs sweep clicks"
+    "qa:all": "pnpm build && node qa/run-all.mjs sweep clicks",
+    "qa:friction": "node qa/run-all.mjs friction"
   },
   "dependencies": {
     "@fontsource/ibm-plex-sans": "^5.3.0",

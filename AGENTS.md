@@ -31,3 +31,5 @@ For migrated non-English saved input, preserve `_legacyText` on the same record 
 Use src/app/routes.ts as the single source for role navigation, drawers, floating actions, hidden routes, redirects, scenarios and the guide. Regenerate qa/routes.json with node qa/sync-routes.mjs. Keep old hash routes redirecting, including query-selected merged tabs. Family/privacy/data rights, doctor messages/appointments/tests, caregiver notes/report upload and care desk tabs are merged features, not removed features.
 
 Doctor navigation uses a bottom bar below 900px and the same sidebar items at 900px and above. The six patient-profile tabs have no mood tab; the plum Overview mood card requires separate doctorMood consent. Preserve upload exclusions for caregivers. Run node qa/run-all.mjs ia for redirects, scenario destinations, responsive layout, consent and the 14-step guided journey, alongside the existing gates.
+
+Every change must respect docs/FRICTION.md. The friction pack takes precedence over the earlier navigation checkpoint. Feature flags in src/app/features.ts park UI only; keep the rules and tests.

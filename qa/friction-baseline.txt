@@ -1,0 +1,10 @@
+$ node qa/run-all.mjs friction
+Verified owned production preview: http://127.0.0.1:5175
+PASS 9:30 PM medicine slot: 1 taps, 0 typed fields, 0 PIN fields (budget 2)
+FAIL prescribed fasting reading by hand, including entry navigation: 5 taps, 0 typed fields, 0 PIN fields (budget 4); budget 4 taps / 0 typed fields exceeded
+FAIL automatic meter reading: 0 taps, 0 typed fields, 0 PIN fields (budget 0); No automatic fasting 128 reading; connector permissions must be set in an earlier setup workflow
+PASS caregiver status after launch login: 0 taps, 0 typed fields, 0 PIN fields (budget 0)
+PASS doctor renews Ramesh from Today: 2 taps, 0 typed fields, 1 PIN fields (budget 3)
+Friction: 2 failing journeys (budgets remain strict; F3–F7 work is separate)
+Owned preview stopped
+[ELIFECYCLE] Command failed with exit code 1.
